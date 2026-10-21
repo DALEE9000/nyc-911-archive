@@ -167,6 +167,39 @@ def build_schools(rows):
     print(f"schools: {sum(weeks.values())} dated count sheets over {len(weeks)} weeks, {len(out['projects'])} projects")
 
 
+# ---------- lab readings (from parse_reports.py) ----------
+READINGS = Path("data/readings.jsonl")
+GUIDELINES = {  # analyte -> (value, unit, label) drawn as a reference line on the chart
+    "asbestos": (0.01, "S/cc", "typical lab sensitivity ~0.004–0.01 S/cc; AHERA clearance is 70 S/mm²"),
+    "dioxin_TCDD_eq": (25, "ng/m2", "NYSDOH surface guideline 25 ng/m²"),
+    "CO2": (1000, "ppm", "ASHRAE 62: outdoor + 700 ppm (≈1,000–1,100)"),
+    "CO": (9, "ppm", "EPA NAAQS / ASHRAE 9 ppm"),
+    "PM2.5": (65, "ug/m3", "EPA 24-h NAAQS 65 µg/m³ (40 for sensitive groups)"),
+    "TVOC": (1, "ppm", "AIHA 1 ppm"),
+    "lead": (40, "ug/ft2", "HUD/NYC floor clearance 40 µg/ft² (air samples: OSHA action 30 µg/m³)"),
+    "temperature": (79, "F", "ASHRAE 55 summer 73–79 °F"), "relative_humidity": (60, "%", "ASHRAE 55 30–60 %"),
+}
+
+
+def build_readings():
+    if not READINGS.exists(): print("no readings.jsonl; skip"); return
+    out, reports = [], set()
+    for line in READINGS.open(encoding="utf-8"):
+        r = json.loads(line); reports.add(r["file"])
+        e = r.get("extra", {})
+        if r["template"] == "metals_air" and r["analyte"] == "lead": r["analyte"] = "lead_metals_panel"
+        if r["analyte"] == "asbestos" and r["value"] == 0 and not r["qual"]: r["qual"] = "<"; r["value"] = e.get("sensitivity_S_cc") or 0.0044
+        out.append({"s": r["school"] or "Unknown", "d": r["date"], "t": r["template"], "a": r["analyte"], "v": r["value"], "q": r["qual"],
+                    "u": r["unit"], "l": r["location"], "n": r["sample"], "f": r["file"], "p": r["page"], "doc": r["doc"],
+                    "x": {k: e[k] for k in ("min", "max", "outdoor_min", "outdoor_max", "type", "n_05_5", "n_gt5", "vol_L", "blank",
+                                            "ocr_corrected_from", "outside_narrative_range", "detection_limit") if k in e and e[k] not in (None, False)},
+                    **({"inf": 1} if r.get("school_inferred") else {})})
+    analytes = collections.Counter(r["a"] for r in out)
+    (SITE / "readings.json").write_text(json.dumps({"n_reports": len(reports), "guidelines": GUIDELINES, "analytes": analytes.most_common(),
+                                                   "rows": out}, ensure_ascii=False), encoding="utf-8")
+    print(f"readings: {len(out)} rows from {len(reports)} reports; analytes {analytes.most_common(8)}")
+
+
 if __name__ == "__main__":
     rows = list(load()); print(len(rows), "docs loaded")
-    build_tree(rows); build_map(rows); build_schools(rows)
+    build_tree(rows); build_map(rows); build_schools(rows); build_readings()

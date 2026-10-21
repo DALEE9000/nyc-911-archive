@@ -97,6 +97,14 @@ th{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:up
 td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)} td:first-child{color:var(--txt)}
 td.num,th.num{text-align:right;font-family:var(--mono);font-size:12px} td.d{white-space:nowrap;font-family:var(--mono);font-size:12px}
 .tbl{overflow-x:auto}
+.ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.ctl select{width:auto;min-width:200px;max-width:100%}
+.chk{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
+.chk input{accent-color:var(--cyan)}
+.chart .dot{fill:var(--cyan);stroke:var(--cyan);stroke-width:1.5;cursor:pointer;opacity:.8} .chart .dot:hover{opacity:1}
+.chart .dot.nd{fill:transparent;opacity:.55}
+.chart .ref{stroke:var(--gold);stroke-dasharray:4 4;stroke-width:1} .chart .reflbl{font:10px var(--mono);fill:var(--gold)}
+tr.rowlink{cursor:pointer} tr.rowlink:hover td{color:var(--txt)}
 .about p{font-size:15px;line-height:1.65;color:var(--muted);max-width:760px} .about h3{font-size:17px;margin:22px 0 6px}
 .about code{font-family:var(--mono);font-size:12.5px;color:var(--aligned)}
 footer{margin:30px 0 40px;padding-top:22px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--dim);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
@@ -115,7 +123,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   <div class="stats" id="stats"></div>
   <nav id="nav">
     <a href="#aid" data-s="aid">Navigator</a><a href="#map" data-s="map">Building map</a>
-    <a href="#schools" data-s="schools">School testing</a><a href="#about" data-s="about">About the data</a>
+    <a href="#schools" data-s="schools">School testing</a><a href="#readings" data-s="readings">Lab readings</a><a href="#about" data-s="about">About the data</a>
   </nav>
 </header>
 
@@ -144,6 +152,20 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   <p class="note">More than half the archive is one-page transmission electron microscopy count sheets from asbestos air samples taken in Lower Manhattan schools, filed by the Board of Education's contractor ATC Associates. The result tables did not survive the city's text recognition, but the analysis dates did. This is the testing campaign week by week, plus the school projects named in ATC's summary reports.</p>
   <div class="chart" id="chart"><h3>Asbestos air count sheets analyzed per week</h3><div class="sub" id="chart-sub"></div><div id="chart-svg"></div><div class="tip" id="tip"></div></div>
   <div class="tbl"><table id="projects"><thead><tr><th>Project named in ATC report</th><th class="num">Docs</th><th>First date</th><th>Last date</th><th>Open</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="s-readings">
+  <p class="note">Every number ATC's lab reports gave the Board of Education, pulled from the typed results tables and narratives of 754 reports: asbestos in air, dioxin on surfaces, lead, metals, and the indoor-air sweeps (CO₂, CO, particulates, temperature, humidity). Hollow dots are below detection. Click a dot or a row to open the page it came from.</p>
+  <div class="stats" id="rd-stats"></div>
+  <div class="ctl">
+    <select class="filter" id="rd-analyte"></select>
+    <select class="filter" id="rd-school"><option value="">All schools</option></select>
+    <label class="chk"><input type="checkbox" id="rd-log" checked /> log scale</label>
+    <label class="chk"><input type="checkbox" id="rd-nd" checked /> show non-detects</label>
+  </div>
+  <div class="chart" id="rd-chart"><h3 id="rd-title"></h3><div class="sub" id="rd-sub"></div><div id="rd-svg"></div><div class="tip" id="rd-tip"></div></div>
+  <div class="tbl"><table id="rd-table"><thead><tr><th>School</th><th>Date</th><th>Location / sample</th><th class="num">Value</th><th>Unit</th><th>Note</th><th>Source</th></tr></thead><tbody></tbody></table></div>
+  <button class="more" id="rd-more" style="display:none"></button>
 </section>
 
 <section id="s-about" class="about">
@@ -178,8 +200,75 @@ function show(s) {
 }
 function route() {
   const h = location.hash.slice(1) || "aid"; const [s, ...rest] = h.split("/");
-  show(["aid","map","schools","about"].includes(s) ? s : "aid");
+  show(["aid","map","schools","readings","about"].includes(s) ? s : "aid");
   if (s === "aid" && rest.length) openFolder(decodeURIComponent(rest[0]), rest.length > 1 ? decodeURIComponent(rest.slice(1).join("/")) : null);
+  if (s === "readings") loadReadings(rest[0] ? decodeURIComponent(rest[0]) : null);
+}
+
+/* ---------- lab readings ---------- */
+let RD = null, rdPage = 0;
+const ANALYTE_LABEL = {asbestos: "Asbestos in air (TEM)", dioxin_TCDD_eq: "Dioxin on surfaces (2,3,7,8-TCDD eq.)", lead: "Lead (air & dust wipes)",
+  PM2_5: "Respirable particulates PM₂.₅", "PM2.5": "Respirable particulates PM₂.₅", CO2: "Carbon dioxide", CO: "Carbon monoxide", temperature: "Temperature",
+  relative_humidity: "Relative humidity", TVOC: "Total volatile organic compounds", mercury: "Mercury vapor", lead_metals_panel: "Lead in air (metals panel)"};
+const METALS = ["aluminum","cadmium","chromium","cobalt","copper","iron","magnesium","manganese","molybdenum","nickel","zinc"];
+async function loadReadings(analyte) {
+  if (!RD) {
+    RD = await fetch("data/readings.json").then(r => r.json());
+    const det = RD.rows.filter(r => r.a === "asbestos" && r.q === "" && r.v > 0).length;
+    const schools = [...new Set(RD.rows.map(r => r.s))].filter(s => s !== "Unknown").sort();
+    $("rd-stats").innerHTML = [[RD.rows.length, "readings"], [RD.n_reports, "reports parsed"], [schools.length, "schools"],
+      [RD.rows.filter(r => r.a === "asbestos").length, "asbestos air samples"], [det, "asbestos detections"]]
+      .map(([n, l]) => `<div class="stat"><b>${fmt(n)}</b><span>${l}</span></div>`).join("");
+    const order = ["asbestos","dioxin_TCDD_eq","lead","lead_metals_panel","PM2.5","CO2","CO","TVOC","temperature","relative_humidity","mercury", ...METALS];
+    $("rd-analyte").innerHTML = order.filter(a => RD.rows.some(r => r.a === a)).map(a =>
+      `<option value="${a}">${ANALYTE_LABEL[a] || a[0].toUpperCase() + a.slice(1) + " (air)"} · ${fmt(RD.rows.filter(r => r.a === a).length)}</option>`).join("");
+    $("rd-school").innerHTML += schools.map(s => `<option>${esc(s)}</option>`).join("");
+    ["rd-analyte","rd-school","rd-log","rd-nd"].forEach(id => $(id).addEventListener("change", () => { rdPage = 0; renderReadings(); }));
+  }
+  if (analyte && [...$("rd-analyte").options].some(o => o.value === analyte)) $("rd-analyte").value = analyte;
+  rdPage = 0; renderReadings();
+}
+function pdfLink(r) { return `${PDF}${encodeURIComponent(r.f)}#page=${r.p}`; }
+function renderReadings() {
+  const a = $("rd-analyte").value, sch = $("rd-school").value, log = $("rd-log").checked, nd = $("rd-nd").checked;
+  let rows = RD.rows.filter(r => r.a === a && r.v != null && r.d && (!sch || r.s === sch) && (nd || r.q === "") && !(r.x && r.x.blank));
+  rows.sort((p, q) => p.d.localeCompare(q.d));
+  const g = RD.guidelines[a]; const unit = rows[0] ? rows[0].u : "";
+  $("rd-title").textContent = (ANALYTE_LABEL[a] || a) + (sch ? " · " + sch : "");
+  const ndn = rows.filter(r => r.q !== "").length;
+  $("rd-sub").textContent = `${fmt(rows.length)} readings${ndn ? `, ${fmt(ndn)} below detection (hollow)` : ""}${g ? ". Dashed line: " + g[2] + "." : "."}`;
+  const W = 960, H = 300, L = 56, R = 10, T = 14, B = 30;
+  const dates = rows.map(r => Date.parse(r.d)); let t0 = Math.min(...dates), t1 = Math.max(...dates); if (t1 - t0 < 864e5 * 30) { t0 -= 864e5 * 15; t1 += 864e5 * 15; }
+  const vals = rows.map(r => r.v).filter(v => v > 0); const vmin = Math.min(...vals, g ? g[0] : Infinity), vmax = Math.max(...vals, g ? g[0] : -Infinity);
+  const useLog = log && vmin > 0 && vmax / vmin > 20;
+  const yv = v => { const lo = useLog ? Math.log10(vmin) : 0, hi = useLog ? Math.log10(vmax) : vmax; const vv = useLog ? Math.log10(Math.max(v, vmin)) : v; return T + (H - T - B) * (1 - (vv - lo) / ((hi - lo) || 1)); };
+  const xd = d => L + (W - L - R) * (Date.parse(d) - t0) / ((t1 - t0) || 1);
+  const ticks = useLog ? [...new Set([vmin, vmax].concat([0.001,0.01,0.1,1,10,100,1000,10000].filter(t => t >= vmin && t <= vmax)))] : [0, .25, .5, .75, 1].map(f => vmax * f);
+  const months = []; for (let d = new Date(t0); d <= new Date(t1); d.setMonth(d.getMonth() + 1)) months.push(new Date(d.getFullYear(), d.getMonth(), 1));
+  const fmtv = v => v >= 100 ? Math.round(v).toLocaleString() : v >= 1 ? +v.toFixed(2) : v.toPrecision(2);
+  $("rd-svg").innerHTML = rows.length ? `<svg viewBox="0 0 ${W} ${H}">
+    ${ticks.map(t => `<line class="grid" x1="${L}" x2="${W - R}" y1="${yv(t)}" y2="${yv(t)}"/><text class="axis" x="${L - 6}" y="${yv(t) + 3}" text-anchor="end">${fmtv(t)}</text>`).join("")}
+    ${months.filter((m, i) => i % Math.ceil(months.length / 12) === 0).map(m => `<text class="axis" x="${xd(m)}" y="${H - 10}">${m.toLocaleString("en-US", {month: "short", year: "2-digit"})}</text>`).join("")}
+    ${g && g[0] >= vmin && g[0] <= vmax ? `<line class="ref" x1="${L}" x2="${W - R}" y1="${yv(g[0])}" y2="${yv(g[0])}"/><text class="reflbl" x="${W - R}" y="${yv(g[0]) - 4}" text-anchor="end">${fmtv(g[0])} ${esc(g[1])}</text>` : ""}
+    ${rows.map((r, i) => `<circle class="dot${r.q ? " nd" : ""}" cx="${xd(r.d).toFixed(1)}" cy="${yv(Math.max(r.v, vmin || 1e-9)).toFixed(1)}" r="4.5" data-i="${i}"/>`).join("")}
+    <text class="axis" x="${L}" y="${T - 3}">${esc(unit)}</text></svg>` : `<div class="hint">No readings for this selection.</div>`;
+  const tip = $("rd-tip"), svg = $("rd-svg").firstElementChild;
+  if (svg && svg.tagName === "svg") {
+    svg.addEventListener("mousemove", e => { const c = e.target.closest("circle"); if (!c) { tip.style.display = "none"; return; }
+      const r = rows[+c.dataset.i]; tip.textContent = `${r.s} · ${r.d} · ${r.l || r.n || ""} · ${r.q}${fmtv(r.v)} ${r.u}`; tip.style.display = "block";
+      const b = $("rd-chart").getBoundingClientRect(); tip.style.left = (e.clientX - b.left) + "px"; tip.style.top = (e.clientY - b.top) + "px"; });
+    svg.addEventListener("mouseleave", () => tip.style.display = "none");
+    svg.addEventListener("click", e => { const c = e.target.closest("circle"); if (c) window.open(pdfLink(rows[+c.dataset.i]), "_blank"); });
+  }
+  const byVal = [...rows].sort((p, q) => (q.v - p.v) || p.d.localeCompare(q.d)); const PAGE = 60, slice = byVal.slice(0, (rdPage + 1) * PAGE);
+  const note = r => [r.x && r.x.type && r.x.type !== "None Detected" ? r.x.type.toLowerCase() : "", r.x && r.x.n_gt5 ? `${r.x.n_gt5} structures >5µ` : "",
+    r.x && r.x.min != null ? `range ${fmtv(r.x.min)}–${fmtv(r.x.max)}` : "", r.x && r.x.outdoor_max != null ? `outdoor ${fmtv(r.x.outdoor_min)}–${fmtv(r.x.outdoor_max)}` : "",
+    r.x && r.x.ocr_corrected_from != null ? `OCR fixed from ${r.x.ocr_corrected_from}` : "", r.x && r.x.outside_narrative_range ? "⚠ outside report's stated range" : "", r.inf ? "school inferred" : ""].filter(Boolean).join("; ");
+  $("rd-table").querySelector("tbody").innerHTML = slice.map(r => `<tr class="rowlink" data-u="${pdfLink(r)}"><td>${esc(r.s)}</td><td class="d">${r.d}</td><td>${esc(r.l || "")}${r.n ? ` <span style="font-family:var(--mono);font-size:11px;color:var(--dim)">#${esc(r.n)}</span>` : ""}</td>
+    <td class="num">${r.q}${fmtv(r.v)}</td><td>${esc(r.u)}</td><td>${esc(note(r))}</td><td><a href="${pdfLink(r)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:11px;text-decoration:none">${esc(r.doc || r.f.replace(".pdf", ""))}</a></td></tr>`).join("");
+  $("rd-table").querySelectorAll("tr.rowlink").forEach(tr => tr.onclick = e => { if (!e.target.closest("a")) window.open(tr.dataset.u, "_blank"); });
+  const more = $("rd-more"); more.style.display = slice.length < byVal.length ? "block" : "none";
+  more.textContent = `Show ${fmt(Math.min(PAGE, byVal.length - slice.length))} more of ${fmt(byVal.length - slice.length)}`; more.onclick = () => { rdPage++; renderReadings(); };
 }
 window.addEventListener("hashchange", route);
 

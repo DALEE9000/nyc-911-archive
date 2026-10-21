@@ -80,7 +80,7 @@ def parse_file(path):
             if RX["re_line"].match(l) and not ctx["school"] and i + 1 < len(lines):
                 nxt = lines[i + 1]
                 if not RX["project_no"].search(nxt) and len(nxt) < 70: ctx["school"] = nxt.strip()
-        m = RX["project_line"].search(txt)
+        m = RX["project_line"].search(txt) or re.search(r"PROJECT NAME:\s*(.+)", txt)
         if m and not ctx["school"]: ctx["school"] = m.group(1).strip()[:80]
         if not ctx["date"]:
             ctx["date"] = norm_date(txt)
