@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>9/11 Document Archive · Alphabet Agency</title>
-<meta name="description" content="A finding aid, building map and lab-testing timeline for the 64,000 records in New York City's 9/11 Document Portal." />
+<meta name="description" content="A navigator, building map and lab-testing timeline for the 64,000 records in New York City's 9/11 Document Portal." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -108,13 +108,13 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
 <header>
   <div class="crumb"><a href="https://projects.thealphabetagency.com/">Alphabet Agency / Projects</a> &nbsp;/&nbsp; 9/11 Document Archive</div>
   <h1>9/11 Document Archive</h1>
-  <div class="tag">A finding aid for New York City's September 11 records</div>
+  <div class="tag">A navigator for New York City's September 11 records</div>
   <p class="intro">In 2026 the city's Law Department published roughly 64,000 scanned documents on the municipal response to the attacks:
     air-quality lab sheets, DEP building files, the 7 World Trade Center emergency bunker, EPA correspondence. The official portal is a search box.
     This is the archive map that goes with it: every box and folder, every building with a file, and the school air-testing campaign laid out in time.</p>
   <div class="stats" id="stats"></div>
   <nav id="nav">
-    <a href="#aid" data-s="aid">Finding aid</a><a href="#map" data-s="map">Building map</a>
+    <a href="#aid" data-s="aid">Navigator</a><a href="#map" data-s="map">Building map</a>
     <a href="#schools" data-s="schools">School testing</a><a href="#about" data-s="about">About the data</a>
   </nav>
 </header>
@@ -135,7 +135,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
 </section>
 
 <section id="s-map">
-  <p class="note">DEP's folder labels are street addresses with block, lot and building identification numbers: one folder per building inspected, referred or cleaned after the collapse. Geocoded with NYC Planning's GeoSearch. Circle size is the number of documents. Click a circle, then a folder name, to open it in the finding aid.</p>
+  <p class="note">DEP's folder labels are street addresses with block, lot and building identification numbers: one folder per building inspected, referred or cleaned after the collapse. Geocoded with NYC Planning's GeoSearch. Circle size is the number of documents. Click a circle, then a folder name, to open it in the navigator.</p>
   <div id="map"></div>
   <div class="legend"><span><i style="width:10px;height:10px"></i>under 10 docs</span><span><i style="width:18px;height:18px"></i>about 50</span><span><i style="width:28px;height:28px"></i>150 or more</span><span id="map-miss"></span></div>
 </section>
@@ -151,7 +151,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   <p>Everything here is derived from the City of New York's <a href="https://sept11documents.cityofnewyork.us/">9/11 Document Portal</a>, published by the Law Department in 2026. Documents are linked, never copied: every title opens the PDF on the city's own server.</p>
   <h3>Method</h3>
   <p>The portal runs on a Mindbreeze search appliance with an open JSON interface. A script paged through the index agency by agency and saved the metadata the city attached to each PDF: title, agency, production volume, box name, folder name, page count, plus the first two thousand characters of the city's own OCR text. No PDFs were downloaded. The index also contains a Markdown twin of every PDF; those are the OCR layer and are excluded from the counts.</p>
-  <p>Building locations come from parsing DEP folder names of the form <code>68 WARREN STREET Block: 137 Lot: 1</code> and geocoding the address with <a href="https://geosearch.planninglabs.nyc/">NYC GeoSearch</a>. Folders that are not addresses (email binders, lab batches, EPA working-group files) are in the finding aid but not on the map.</p>
+  <p>Building locations come from parsing DEP folder names of the form <code>68 WARREN STREET Block: 137 Lot: 1</code> and geocoding the address with <a href="https://geosearch.planninglabs.nyc/">NYC GeoSearch</a>. Folders that are not addresses (email binders, lab batches, EPA working-group files) are in the navigator but not on the map.</p>
   <p>The school testing timeline reads the analysis date printed on each count sheet. Sheets whose date did not survive OCR are omitted; the numbers are a floor, not a census.</p>
   <h3>Caveats</h3>
   <p>Box and folder labels were typed by whoever scanned the box, so spelling varies and some folders are mislabeled. The "Date" field in the city's index is the date of indexing, not of the document, and is ignored here. Production volumes (NYC-WTC0001 through 0010) are the batches in which the Law Department released records, not an archival series.</p>

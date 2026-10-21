@@ -1,6 +1,6 @@
 # nyc-911-archive
 
-Finding aid, building map and school air-testing timeline for the ~64,000 records in NYC Law
+Navigator, building map and school air-testing timeline for the ~64,000 records in NYC Law
 Department's [9/11 Document Portal](https://sept11documents.cityofnewyork.us/). Static site; lives
 at https://projects.thealphabetagency.com/nyc-911-archive/ (GitHub Pages, served from `docs/`).
 
