@@ -12,7 +12,7 @@ import collections, datetime as dt, html, json, re, time
 from pathlib import Path
 import requests
 
-DOCS = Path("data/docs.jsonl"); SITE = Path("site/data"); CACHE = Path("data/geocode_cache.json")
+DOCS = Path("data/docs.jsonl"); SITE = Path("docs/data"); CACHE = Path("data/geocode_cache.json")
 GEO = "https://geosearch.planninglabs.nyc/v2/search"
 
 

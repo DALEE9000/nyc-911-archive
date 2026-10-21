@@ -2,7 +2,7 @@
 
 Finding aid, building map and school air-testing timeline for the ~64,000 records in NYC Law
 Department's [9/11 Document Portal](https://sept11documents.cityofnewyork.us/). Static site; lives
-at https://projects.thealphabetagency.com/nyc-911-archive/ (GitHub Pages, served from `site/`).
+at https://projects.thealphabetagency.com/nyc-911-archive/ (GitHub Pages, served from `docs/`).
 
 ## Run / rebuild
 ```
@@ -10,12 +10,12 @@ pip install requests streamlit
 python harvest.py --estimate        # volume check (free public API)
 python harvest.py                   # ~680 requests, ~25 min, resumable (data/raw/manifest.jsonl)
 python harvest.py --merge           # data/raw/*.json -> data/docs.jsonl (dedupes asc/desc overlap)
-python build_site.py                # -> site/data/{tree,buildings,schools}.json + site/data/docs/*.json
-cd site && python -m http.server 8777   # preview at http://localhost:8777/
+python build_site.py                # -> docs/data/{tree,buildings,schools}.json + docs/data/docs/*.json
+cd docs && python -m http.server 8777   # preview at http://localhost:8777/
 
 streamlit run app.py                # separate: live search client over the city's API
 ```
-`data/` is gitignored (160 MB raw). `site/data/` is committed; it is what the page reads.
+`data/` is gitignored (160 MB raw). `docs/data/` is committed; it is what the page reads.
 
 ## API notes (reverse-engineered 2026-10-21)
 - `POST https://sept11documents.cityofnewyork.us/api/v2/search`. No auth, no CORS.
