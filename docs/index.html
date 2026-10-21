@@ -38,7 +38,7 @@ nav{display:flex;gap:8px;overflow-x:auto;margin:22px 0 0;padding-bottom:12px;bor
 nav a{flex:none;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;
   border:1px solid var(--line2);border-radius:9px;padding:9px 14px;background:var(--panel);transition:.18s}
 nav a.on,nav a:hover{color:var(--cyan);border-color:var(--cyan);box-shadow:var(--glow)}
-section{display:none;padding:22px 0 40px} section.on{display:block}
+section{display:none;padding:26px 0 40px} section.on{display:block}
 .sec-h{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;margin:6px 0 16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .sec-h .count{color:var(--dim)}
 .note{font-size:14px;line-height:1.55;color:var(--muted);max-width:760px;margin:0 0 16px}
@@ -120,7 +120,6 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
 </header>
 
 <section id="s-aid">
-  <div class="sec-h"><span>Agency → box → folder → document</span><span class="count" id="aid-count"></span></div>
   <p class="note">The city tagged each DEP and DCAS record with the physical box and folder it was scanned from. Those labels are the only structure the archive has, and the official site hides them. Pick an agency, open a box, click a folder.</p>
   <div class="aid">
     <div class="panel">
@@ -136,21 +135,18 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
 </section>
 
 <section id="s-map">
-  <div class="sec-h"><span>Buildings with a file in the archive</span><span class="count" id="map-count"></span></div>
   <p class="note">DEP's folder labels are street addresses with block, lot and building identification numbers: one folder per building inspected, referred or cleaned after the collapse. Geocoded with NYC Planning's GeoSearch. Circle size is the number of documents. Click a circle, then a folder name, to open it in the finding aid.</p>
   <div id="map"></div>
   <div class="legend"><span><i style="width:10px;height:10px"></i>under 10 docs</span><span><i style="width:18px;height:18px"></i>about 50</span><span><i style="width:28px;height:28px"></i>150 or more</span><span id="map-miss"></span></div>
 </section>
 
 <section id="s-schools">
-  <div class="sec-h"><span>Board of Education air testing, 2001–2003</span><span class="count" id="sch-count"></span></div>
   <p class="note">More than half the archive is one-page transmission electron microscopy count sheets from asbestos air samples taken in Lower Manhattan schools, filed by the Board of Education's contractor ATC Associates. The result tables did not survive the city's text recognition, but the analysis dates did. This is the testing campaign week by week, plus the school projects named in ATC's summary reports.</p>
   <div class="chart" id="chart"><h3>Asbestos air count sheets analyzed per week</h3><div class="sub" id="chart-sub"></div><div id="chart-svg"></div><div class="tip" id="tip"></div></div>
   <div class="tbl"><table id="projects"><thead><tr><th>Project named in ATC report</th><th class="num">Docs</th><th>First date</th><th>Last date</th><th>Open</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section id="s-about" class="about">
-  <div class="sec-h"><span>About the data</span></div>
   <h3>Source</h3>
   <p>Everything here is derived from the City of New York's <a href="https://sept11documents.cityofnewyork.us/">9/11 Document Portal</a>, published by the Law Department in 2026. Documents are linked, never copied: every title opens the PDF on the city's own server.</p>
   <h3>Method</h3>
@@ -250,7 +246,7 @@ function buildMap(fc) {
       .bindPopup(`<div class="pp"><h4>${esc(p.addr)}</h4><div class="m">${fmt(p.n)} docs${p.bin ? " · BIN " + p.bin : ""}${p.block ? " · Block " + p.block + " Lot " + p.lot : ""}</div><ul>${folders}</ul></div>`)
       .addTo(map);
   });
-  $("map-count").textContent = `${fc.features.length} buildings · ${fmt(fc.features.reduce((s, f) => s + f.properties.n, 0))} documents`;
+  void(`${fc.features.length} buildings`);
 }
 
 /* ---------- chart ---------- */
@@ -271,7 +267,7 @@ function buildChart(s) {
   svg.addEventListener("mouseleave", () => tip.style.display = "none");
   const total = w.reduce((a, b) => a + b[1], 0);
   $("chart-sub").textContent = `${fmt(total)} dated sheets, ${w[0][0]} to ${w[w.length - 1][0]}. Analysts: ${s.analysts.slice(0, 3).map(a => a[0]).join(", ")}.`;
-  $("sch-count").textContent = `${fmt(total)} sheets · ${s.projects.length} projects`;
+  void(`${fmt(total)} sheets`);
   $("projects").querySelector("tbody").innerHTML = s.projects.filter(p => p.n > 1).slice(0, 60).map(p =>
     `<tr><td>${esc(p.name)}</td><td class="num">${p.n}</td><td class="d">${p.first || ""}</td><td class="d">${p.last || ""}</td><td>${p.docs.slice(0, 3).map(d => `<a href="${PDF}${encodeURIComponent(d.t)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;text-decoration:none">${d.t.replace("NYC-WTC_", "").replace(".pdf", "")}</a>`).join(" ")}</td></tr>`).join("");
 }
@@ -285,7 +281,7 @@ function buildChart(s) {
   const folders = tree.agencies.reduce((s, a) => s + a.boxes.reduce((t, b) => t + b.folders.filter(f => !f.name.startsWith("(")).length, 0), 0);
   $("stats").innerHTML = [[docs, "documents"], [tree.agencies.length, "agencies"], [boxes, "boxes"], [folders, "folders"], [bld.features.length, "buildings mapped"]]
     .map(([n, l]) => `<div class="stat"><b>${fmt(n)}</b><span>${l}</span></div>`).join("");
-  $("aid-count").textContent = `${fmt(docs)} documents`;
+  void(`${fmt(docs)} documents`);
   renderAgencies(); buildMap(bld); buildChart(sch); route();
 })();
 </script>
