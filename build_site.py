@@ -3,7 +3,7 @@
     python build_site.py            # writes site/data/*.json (geocodes new DEP folders, cached)
 
 Outputs
-  site/data/tree.json            agency -> box -> folder counts (finding aid skeleton)
+  site/data/tree.json            agency -> box -> folder counts (navigator skeleton)
   site/data/docs/<agency>.json   doc lists per agency, keyed by box|folder (DOE count sheets collapsed)
   site/data/buildings.json       building folders geocoded (NYC GeoSearch, free) with doc counts
   site/data/schools.json         DOE lab testing timeline (count sheets per week) + ATC project index
@@ -34,7 +34,7 @@ def load():
         yield r
 
 
-# ---------- finding aid ----------
+# ---------- navigator ----------
 def is_count_sheet(r): return r["agency"].startswith("Education") and "Count S" in r["content"]
 
 
