@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>9/11 Document Archive · Alphabet Agency</title>
+<meta name="description" content="A finding aid, building map and lab-testing timeline for the 64,000 records in New York City's 9/11 Document Portal." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+:root{
+  --bg:#05080f; --panel:rgba(17,26,46,.55); --panel2:rgba(17,26,46,.85); --line:rgba(90,140,200,.18); --line2:rgba(90,140,200,.35);
+  --txt:#e8f1ff; --muted:#8aa0c6; --dim:#5a7099; --cyan:#22d3ee; --aligned:#2ee6a6; --gold:#ffd166;
+  --glow:0 0 24px rgba(34,211,238,.35); --mono:"JetBrains Mono",monospace; --serif:"Instrument Serif",Georgia,serif;
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:radial-gradient(1200px 700px at 80% -10%,rgba(34,211,238,.10),transparent 60%),
+  radial-gradient(900px 600px at -5% 110%,rgba(46,230,166,.08),transparent 55%),var(--bg);
+  color:var(--txt);font-family:"Space Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:48px 48px;mask-image:radial-gradient(circle at 50% 20%,#000,transparent 80%)}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 16px}
+a{color:var(--cyan)}
+header{padding:40px 0 18px}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--dim)}
+.crumb a{color:var(--muted);text-decoration:none} .crumb a:hover{color:var(--cyan)}
+h1{font-family:var(--serif);font-size:clamp(34px,6vw,52px);font-weight:400;line-height:1;margin:14px 0 0;letter-spacing:.005em}
+.tag{font-family:var(--serif);font-style:italic;font-size:21px;color:var(--cyan);margin-top:8px}
+.intro{max-width:720px;font-size:16px;line-height:1.6;color:var(--muted);margin:18px 0 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:26px 0 8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;backdrop-filter:blur(10px)}
+.stat b{display:block;font-family:var(--mono);font-size:24px;font-weight:600;color:var(--txt)}
+.stat span{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+nav{display:flex;gap:8px;overflow-x:auto;margin:22px 0 0;padding-bottom:12px;border-bottom:1px solid var(--line);scrollbar-width:none}
+nav a{flex:none;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;
+  border:1px solid var(--line2);border-radius:9px;padding:9px 14px;background:var(--panel);transition:.18s}
+nav a.on,nav a:hover{color:var(--cyan);border-color:var(--cyan);box-shadow:var(--glow)}
+section{display:none;padding:22px 0 40px} section.on{display:block}
+.sec-h{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;margin:6px 0 16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sec-h .count{color:var(--dim)}
+.note{font-size:14px;line-height:1.55;color:var(--muted);max-width:760px;margin:0 0 16px}
+
+/* finding aid */
+.aid{display:grid;grid-template-columns:300px 1fr;gap:18px}
+@media(max-width:820px){.aid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(12px);overflow:hidden}
+.panel .hd{padding:12px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.filter{width:100%;background:rgba(5,8,15,.6);border:1px solid var(--line2);border-radius:9px;color:var(--txt);font:14px "Space Grotesk",sans-serif;padding:9px 12px;outline:none}
+.filter:focus{border-color:var(--cyan)}
+.aglist{list-style:none;margin:0;padding:6px;max-height:70vh;overflow:auto}
+.aglist li{display:flex;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;font-size:14px;color:var(--muted)}
+.aglist li:hover{background:rgba(34,211,238,.07);color:var(--txt)} .aglist li.on{background:rgba(34,211,238,.12);color:var(--cyan)}
+.aglist li .n{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.boxes{padding:8px}
+details{border-bottom:1px solid var(--line)} details:last-child{border-bottom:0}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:11px 10px;font-size:15px;font-weight:500}
+summary::-webkit-details-marker{display:none}
+summary>span:first-child::before{content:"▸ ";color:var(--dim);font-size:12px} details[open]>summary>span:first-child::before{content:"▾ "}
+summary .n{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+.folders{list-style:none;margin:0 0 8px 22px;padding:0}
+.folders li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer}
+.folders li:hover{background:rgba(34,211,238,.07);color:var(--txt)} .folders li.on{color:var(--cyan);background:rgba(34,211,238,.1)}
+.docs{margin-top:18px}
+.doc{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline}
+.doc:last-child{border-bottom:0}
+.doc a{font-family:var(--mono);font-size:13px;text-decoration:none;white-space:nowrap} .doc a:hover{text-decoration:underline}
+.doc .meta{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.doc .snip{grid-column:1/-1;font-size:13.5px;line-height:1.5;color:var(--muted)}
+.more{display:block;width:100%;background:none;border:1px dashed var(--line2);border-radius:9px;color:var(--muted);font:12px var(--mono);letter-spacing:.06em;padding:10px;margin-top:10px;cursor:pointer}
+.more:hover{color:var(--cyan);border-color:var(--cyan)}
+.hint{padding:28px 18px;color:var(--dim);font-size:14px;text-align:center}
+
+/* map */
+#map{height:min(72vh,680px);border-radius:16px;border:1px solid var(--line2);background:#0a1120}
+.leaflet-container{font-family:"Space Grotesk",sans-serif;background:#0a1120}
+.leaflet-tile{filter:invert(1) hue-rotate(190deg) brightness(.75) contrast(.9) saturate(.35)}
+.leaflet-popup-content-wrapper{background:var(--panel2);color:var(--txt);border:1px solid var(--line2);border-radius:12px;backdrop-filter:blur(12px)}
+.leaflet-popup-tip{background:var(--panel2)} .leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.5;max-height:260px;overflow:auto}
+.pp h4{margin:0 0 2px;font-size:15px} .pp .m{font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:8px}
+.pp ul{margin:0;padding-left:0;list-style:none} .pp li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px solid var(--line)}
+.pp li a{color:var(--muted);text-decoration:none;font-size:12.5px} .pp li a:hover{color:var(--cyan)} .pp li .n{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.legend{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;border-radius:50%;background:rgba(34,211,238,.35);border:1.5px solid var(--cyan);vertical-align:middle;margin-right:6px}
+
+/* chart */
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 16px 8px;backdrop-filter:blur(12px);position:relative}
+.chart h3{margin:0 0 2px;font-size:16px;font-weight:600} .chart .sub{font-size:13px;color:var(--muted);margin-bottom:12px}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart .bar{fill:var(--cyan);opacity:.85;rx:2} .chart .bar:hover{opacity:1}
+.chart .axis{font:10px var(--mono);fill:var(--dim)} .chart .grid{stroke:var(--line);stroke-width:1}
+.tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:7px 10px;font:12px var(--mono);color:var(--txt);display:none;white-space:nowrap;transform:translate(-50%,-115%)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:18px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)} td:first-child{color:var(--txt)}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:12px} td.d{white-space:nowrap;font-family:var(--mono);font-size:12px}
+.tbl{overflow-x:auto}
+.about p{font-size:15px;line-height:1.65;color:var(--muted);max-width:760px} .about h3{font-size:17px;margin:22px 0 6px}
+.about code{font-family:var(--mono);font-size:12.5px;color:var(--aligned)}
+footer{margin:30px 0 40px;padding-top:22px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--dim);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="crumb"><a href="https://projects.thealphabetagency.com/">Alphabet Agency / Projects</a> &nbsp;/&nbsp; 9/11 Document Archive</div>
+  <h1>9/11 Document Archive</h1>
+  <div class="tag">A finding aid for New York City's September 11 records</div>
+  <p class="intro">In 2026 the city's Law Department published roughly 64,000 scanned documents on the municipal response to the attacks:
+    air-quality lab sheets, DEP building files, the 7 World Trade Center emergency bunker, EPA correspondence. The official portal is a search box.
+    This is the archive map that goes with it: every box and folder, every building with a file, and the school air-testing campaign laid out in time.</p>
+  <div class="stats" id="stats"></div>
+  <nav id="nav">
+    <a href="#aid" data-s="aid">Finding aid</a><a href="#map" data-s="map">Building map</a>
+    <a href="#schools" data-s="schools">School testing</a><a href="#about" data-s="about">About the data</a>
+  </nav>
+</header>
+
+<section id="s-aid">
+  <div class="sec-h"><span>Agency → box → folder → document</span><span class="count" id="aid-count"></span></div>
+  <p class="note">The city tagged each DEP and DCAS record with the physical box and folder it was scanned from. Those labels are the only structure the archive has, and the official site hides them. Pick an agency, open a box, click a folder.</p>
+  <div class="aid">
+    <div class="panel">
+      <div class="hd">Agencies</div>
+      <div style="padding:10px 10px 0"><input class="filter" id="folder-q" placeholder="Filter folders (e.g. Liberty, Gilsenan, FEMA)" /></div>
+      <ul class="aglist" id="aglist"></ul>
+    </div>
+    <div>
+      <div class="panel"><div class="hd" id="box-hd">Boxes</div><div class="boxes" id="boxes"><div class="hint">Choose an agency.</div></div></div>
+      <div class="panel docs" id="docs" style="display:none"><div class="hd" id="docs-hd"></div><div id="doclist"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="s-map">
+  <div class="sec-h"><span>Buildings with a file in the archive</span><span class="count" id="map-count"></span></div>
+  <p class="note">DEP's folder labels are street addresses with block, lot and building identification numbers: one folder per building inspected, referred or cleaned after the collapse. Geocoded with NYC Planning's GeoSearch. Circle size is the number of documents. Click a circle, then a folder name, to open it in the finding aid.</p>
+  <div id="map"></div>
+  <div class="legend"><span><i style="width:10px;height:10px"></i>under 10 docs</span><span><i style="width:18px;height:18px"></i>about 50</span><span><i style="width:28px;height:28px"></i>150 or more</span><span id="map-miss"></span></div>
+</section>
+
+<section id="s-schools">
+  <div class="sec-h"><span>Board of Education air testing, 2001–2003</span><span class="count" id="sch-count"></span></div>
+  <p class="note">More than half the archive is one-page transmission electron microscopy count sheets from asbestos air samples taken in Lower Manhattan schools, filed by the Board of Education's contractor ATC Associates. The result tables did not survive the city's text recognition, but the analysis dates did. This is the testing campaign week by week, plus the school projects named in ATC's summary reports.</p>
+  <div class="chart" id="chart"><h3>Asbestos air count sheets analyzed per week</h3><div class="sub" id="chart-sub"></div><div id="chart-svg"></div><div class="tip" id="tip"></div></div>
+  <div class="tbl"><table id="projects"><thead><tr><th>Project named in ATC report</th><th class="num">Docs</th><th>First date</th><th>Last date</th><th>Open</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="s-about" class="about">
+  <div class="sec-h"><span>About the data</span></div>
+  <h3>Source</h3>
+  <p>Everything here is derived from the City of New York's <a href="https://sept11documents.cityofnewyork.us/">9/11 Document Portal</a>, published by the Law Department in 2026. Documents are linked, never copied: every title opens the PDF on the city's own server.</p>
+  <h3>Method</h3>
+  <p>The portal runs on a Mindbreeze search appliance with an open JSON interface. A script paged through the index agency by agency and saved the metadata the city attached to each PDF: title, agency, production volume, box name, folder name, page count, plus the first two thousand characters of the city's own OCR text. No PDFs were downloaded. The index also contains a Markdown twin of every PDF; those are the OCR layer and are excluded from the counts.</p>
+  <p>Building locations come from parsing DEP folder names of the form <code>68 WARREN STREET Block: 137 Lot: 1</code> and geocoding the address with <a href="https://geosearch.planninglabs.nyc/">NYC GeoSearch</a>. Folders that are not addresses (email binders, lab batches, EPA working-group files) are in the finding aid but not on the map.</p>
+  <p>The school testing timeline reads the analysis date printed on each count sheet. Sheets whose date did not survive OCR are omitted; the numbers are a floor, not a census.</p>
+  <h3>Caveats</h3>
+  <p>Box and folder labels were typed by whoever scanned the box, so spelling varies and some folders are mislabeled. The "Date" field in the city's index is the date of indexing, not of the document, and is ignored here. Production volumes (NYC-WTC0001 through 0010) are the batches in which the Law Department released records, not an archival series.</p>
+  <h3>Rebuild</h3>
+  <p><code>python harvest.py</code> then <code>python build_site.py</code>, from the <a href="https://github.com/DALEE9000/nyc-911-archive">repository</a>. The harvest is resumable and free.</p>
+</section>
+
+<footer><span>© <span id="yr"></span> Alphabet Agency</span><span><a href="https://thealphabetagency.com">thealphabetagency.com</a></span></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const PDF = "https://sept11documents.cityofnewyork.us/apps/content/September11_MD/";
+const fmt = n => n.toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = id => document.getElementById(id);
+let TREE, cur = {agency: null, docs: null, key: null}, map, pendingFolder = null;
+
+/* ---------- routing ---------- */
+function show(s) {
+  document.querySelectorAll("section").forEach(x => x.classList.toggle("on", x.id === "s-" + s));
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.s === s));
+  if (s === "map" && map) setTimeout(() => map.invalidateSize(), 50);
+}
+function route() {
+  const h = location.hash.slice(1) || "aid"; const [s, ...rest] = h.split("/");
+  show(["aid","map","schools","about"].includes(s) ? s : "aid");
+  if (s === "aid" && rest.length) openFolder(decodeURIComponent(rest[0]), rest.length > 1 ? decodeURIComponent(rest.slice(1).join("/")) : null);
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- finding aid ---------- */
+function renderAgencies(q = "") {
+  $("aglist").innerHTML = TREE.agencies.map(a => {
+    const n = q ? a.boxes.reduce((s, b) => s + b.folders.filter(f => f.name.toLowerCase().includes(q)).reduce((t, f) => t + f.n, 0), 0) : a.n;
+    return n ? `<li data-a="${a.slug}" class="${cur.agency && cur.agency.slug === a.slug ? "on" : ""}"><span>${esc(a.name)}</span><span class="n">${fmt(n)}</span></li>` : "";
+  }).join("");
+}
+function renderBoxes(a, q = "") {
+  $("box-hd").textContent = a.name;
+  const boxes = a.boxes.map(b => {
+    const fs = b.folders.filter(f => !q || f.name.toLowerCase().includes(q));
+    if (!fs.length) return "";
+    return `<details ${q || a.boxes.length === 1 ? "open" : ""}><summary><span>${esc(b.name)}</span><span class="n">${fs.length} folders · ${fmt(fs.reduce((s,f)=>s+f.n,0))} docs</span></summary>
+      <ul class="folders">${fs.map(f => `<li data-k="${esc(b.name)}|${esc(f.name)}" class="${cur.key === b.name + "|" + f.name ? "on" : ""}"><span>${esc(f.name)}</span><span class="n">${fmt(f.n)}</span></li>`).join("")}</ul></details>`;
+  }).join("");
+  $("boxes").innerHTML = boxes || `<div class="hint">No folders match.</div>`;
+}
+async function loadDocs(a) {
+  if (cur.docs && cur.agency === a) return cur.docs;
+  $("docs").style.display = "block"; $("docs-hd").textContent = "Loading…"; $("doclist").innerHTML = "";
+  cur.docs = await fetch(`data/docs/${a.slug}.json`).then(r => r.json()); return cur.docs;
+}
+let page = 0; const PAGE = 100;
+function renderDocs(key, reset = true) {
+  const list = (cur.docs || {})[key] || []; if (reset) page = 0;
+  const [box, folder] = key.split("|");
+  $("docs").style.display = "block";
+  $("docs-hd").innerHTML = `${esc(box)} / ${esc(folder)} <span style="color:var(--muted)">· ${fmt(list.length)} documents</span>`;
+  const slice = list.slice(0, (page + 1) * PAGE);
+  $("doclist").innerHTML = (list.length ? slice.map(d => `<div class="doc"><a href="${PDF}${encodeURIComponent(d.t)}" target="_blank" rel="noopener">${esc(d.t)}</a>
+      <span class="meta">${d.p} pp · ${esc(d.v)}</span>${d.s ? `<div class="snip">${esc(d.s)}…</div>` : ""}</div>`).join("")
+    : `<div class="hint">${folder.startsWith("TEM asbestos") ? "Count sheets are summarized under School testing; the city's portal lists them individually." : "No documents."}</div>`)
+    + (slice.length < list.length ? `<button class="more" id="more">Show ${fmt(Math.min(PAGE, list.length - slice.length))} more of ${fmt(list.length - slice.length)}</button>` : "");
+  const m = $("more"); if (m) m.onclick = () => { page++; renderDocs(key, false); };
+  document.querySelectorAll(".folders li").forEach(li => li.classList.toggle("on", li.dataset.k === key));
+}
+async function openFolder(slug, key) {
+  const a = TREE.agencies.find(x => x.slug === slug); if (!a) return;
+  cur.agency = a; cur.key = key; renderAgencies($("folder-q").value.toLowerCase()); renderBoxes(a, $("folder-q").value.toLowerCase());
+  if (key) {
+    await loadDocs(a); renderDocs(key);
+    const li = document.querySelector(`.folders li[data-k="${CSS.escape(key)}"]`); if (li) { li.closest("details").open = true; }
+    $("docs").scrollIntoView({behavior: "smooth", block: "start"});
+  } else { await loadDocs(a); $("docs").style.display = "none"; }
+}
+$("aglist").addEventListener("click", e => { const li = e.target.closest("li"); if (li) location.hash = "aid/" + li.dataset.a; });
+$("boxes").addEventListener("click", e => { const li = e.target.closest("li[data-k]"); if (li) location.hash = "aid/" + cur.agency.slug + "/" + encodeURIComponent(li.dataset.k); });
+$("folder-q").addEventListener("input", e => { const q = e.target.value.toLowerCase(); renderAgencies(q); if (cur.agency) renderBoxes(cur.agency, q); });
+
+/* ---------- map ---------- */
+function slugOf(name) { return (TREE.agencies.find(a => a.name === name) || {}).slug; }
+function buildMap(fc) {
+  map = L.map("map", {scrollWheelZoom: false}).setView([40.711, -74.009], 15);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution: "&copy; OpenStreetMap contributors", maxZoom: 19}).addTo(map);
+  const r = n => Math.max(5, Math.min(22, 3 + Math.sqrt(n) * 1.5));
+  fc.features.sort((a, b) => b.properties.n - a.properties.n).forEach(f => {
+    const p = f.properties, [lon, lat] = f.geometry.coordinates;
+    const folders = p.folders.map(([name, n]) => { const ag = p.agencies[0][0]; const box = p.boxes[0][0];
+      return `<li><a href="#aid/${slugOf(ag)}/${encodeURIComponent(box + "|" + name)}">${esc(name)}</a><span class="n">${n}</span></li>`; }).join("");
+    L.circleMarker([lat, lon], {radius: r(p.n), color: "#22d3ee", weight: 1.5, fillColor: "#22d3ee", fillOpacity: .35})
+      .bindPopup(`<div class="pp"><h4>${esc(p.addr)}</h4><div class="m">${fmt(p.n)} docs${p.bin ? " · BIN " + p.bin : ""}${p.block ? " · Block " + p.block + " Lot " + p.lot : ""}</div><ul>${folders}</ul></div>`)
+      .addTo(map);
+  });
+  $("map-count").textContent = `${fc.features.length} buildings · ${fmt(fc.features.reduce((s, f) => s + f.properties.n, 0))} documents`;
+}
+
+/* ---------- chart ---------- */
+function buildChart(s) {
+  const W = 960, H = 260, L = 44, R = 8, T = 12, B = 34, w = s.weeks, max = Math.max(...w.map(x => x[1]));
+  const x = i => L + i * (W - L - R) / w.length, bw = Math.max(2, (W - L - R) / w.length - 2), y = v => T + (H - T - B) * (1 - v / max);
+  const ticks = [0, .25, .5, .75, 1].map(t => Math.round(max * t));
+  let lastX = -1e9; const months = w.map((d, i) => [i, d[0].slice(0, 7)]).filter(([i, m], k, arr) => k === 0 || m !== arr[k - 1][1])
+    .filter(([i]) => { if (x(i) - lastX < 46) return false; lastX = x(i); return true; });
+  $("chart-svg").innerHTML = `<svg viewBox="0 0 ${W} ${H}">
+    ${ticks.map(t => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text class="axis" x="${L - 6}" y="${y(t) + 3}" text-anchor="end">${fmt(t)}</text>`).join("")}
+    ${w.map((d, i) => `<rect class="bar" x="${x(i)}" y="${y(d[1])}" width="${bw}" height="${H - B - y(d[1])}" data-i="${i}"/>`).join("")}
+    ${months.map(([i, m]) => `<text class="axis" x="${x(i)}" y="${H - 12}">${new Date(m + "-15").toLocaleString("en-US", {month: "short", year: "2-digit"})}</text>`).join("")}</svg>`;
+  const tip = $("tip"), svg = $("chart-svg").firstElementChild;
+  svg.addEventListener("mousemove", e => { const b = e.target.closest("rect"); if (!b) { tip.style.display = "none"; return; }
+    const d = w[+b.dataset.i]; tip.textContent = `week of ${d[0]} · ${fmt(d[1])} sheets`; tip.style.display = "block";
+    const r = $("chart").getBoundingClientRect(); tip.style.left = (e.clientX - r.left) + "px"; tip.style.top = (e.clientY - r.top) + "px"; });
+  svg.addEventListener("mouseleave", () => tip.style.display = "none");
+  const total = w.reduce((a, b) => a + b[1], 0);
+  $("chart-sub").textContent = `${fmt(total)} dated sheets, ${w[0][0]} to ${w[w.length - 1][0]}. Analysts: ${s.analysts.slice(0, 3).map(a => a[0]).join(", ")}.`;
+  $("sch-count").textContent = `${fmt(total)} sheets · ${s.projects.length} projects`;
+  $("projects").querySelector("tbody").innerHTML = s.projects.filter(p => p.n > 1).slice(0, 60).map(p =>
+    `<tr><td>${esc(p.name)}</td><td class="num">${p.n}</td><td class="d">${p.first || ""}</td><td class="d">${p.last || ""}</td><td>${p.docs.slice(0, 3).map(d => `<a href="${PDF}${encodeURIComponent(d.t)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:12px;text-decoration:none">${d.t.replace("NYC-WTC_", "").replace(".pdf", "")}</a>`).join(" ")}</td></tr>`).join("");
+}
+
+/* ---------- boot ---------- */
+(async () => {
+  $("yr").textContent = new Date().getFullYear();
+  const [tree, bld, sch] = await Promise.all(["data/tree.json", "data/buildings.json", "data/schools.json"].map(u => fetch(u).then(r => r.json())));
+  TREE = tree;
+  const docs = tree.agencies.reduce((s, a) => s + a.n, 0), boxes = tree.agencies.reduce((s, a) => s + a.boxes.filter(b => !b.name.startsWith("(")).length, 0);
+  const folders = tree.agencies.reduce((s, a) => s + a.boxes.reduce((t, b) => t + b.folders.filter(f => !f.name.startsWith("(")).length, 0), 0);
+  $("stats").innerHTML = [[docs, "documents"], [tree.agencies.length, "agencies"], [boxes, "boxes"], [folders, "folders"], [bld.features.length, "buildings mapped"]]
+    .map(([n, l]) => `<div class="stat"><b>${fmt(n)}</b><span>${l}</span></div>`).join("");
+  $("aid-count").textContent = `${fmt(docs)} documents`;
+  renderAgencies(); buildMap(bld); buildChart(sch); route();
+})();
+</script>
+</body>
+</html>
