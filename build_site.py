@@ -215,7 +215,10 @@ def handwritten_rows():
                         "extra": {"legibility": s.get("legibility"), "handwritten": True, "cellulose_pct": s.get("cellulose_pct"),
                                   "fiberglass_pct": s.get("fiberglass_pct"), "other_fibrous": s.get("other_fibrous")}})
     for r in out:
-        if r["date"] and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(r["date"])): r["date"] = None
+        d = str(r["date"] or "")
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", d) or d < "2001-09-11":   # pre-attack dates are transcription/writer slips
+            if d: r["extra"]["date_as_written"] = d
+            r["date"] = None
     return out
 
 
