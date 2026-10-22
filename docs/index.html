@@ -95,7 +95,7 @@ summary .n{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:n
 .chart .bar{fill:var(--cyan);opacity:.85;rx:2} .chart .cmp{fill:var(--gold);opacity:.85;rx:2} .chart .bar:hover{opacity:1}
 .chart .axis{font:300 11px var(--mono);fill:var(--dim)} .chart .grid{stroke:var(--line);stroke-width:1}
 .tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:7px 10px;font:12px var(--mono);color:var(--txt);display:none;white-space:nowrap;transform:translate(-50%,-115%)}
-table{width:100%;border-collapse:collapse;font-size:15px;margin-top:18px}
+table{width:100%;border-collapse:collapse;font-size:15px;margin-top:10px}
 th{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2)}
 td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)} td:first-child{color:var(--txt)}
 td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px} td.d{white-space:nowrap;font-family:var(--mono);font-size:13px}
@@ -116,6 +116,14 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px} td.d{whit
 @media (max-width:520px){.cb{grid-template-columns:1fr;gap:4px}}
 .chart .ref{stroke:var(--gold);stroke-dasharray:4 4;stroke-width:1} .chart .reflbl{font:11px var(--mono);fill:var(--gold)}
 tr.rowlink{cursor:pointer} tr.rowlink:hover td{color:var(--txt)}
+th.sort{cursor:pointer;user-select:none;white-space:nowrap} th.sort:hover{color:var(--txt)} th.sort.on{color:var(--cyan)} th.sort::after{content:attr(data-dir);margin-left:4px;font-size:9px}
+td.mono,a.mono{font-family:var(--mono);font-size:12.5px} a.mono{text-decoration:none;white-space:nowrap} a.mono small{color:var(--dim);font-size:11px} a.mono:hover{text-decoration:underline}
+td.num.nd{color:var(--dim)} td.notes{font-size:13.5px;color:var(--dim);line-height:1.4;max-width:300px} td.notes span+span::before{content:" · "}
+.pager{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;margin-top:16px;font:300 12.5px var(--mono);color:var(--muted)}
+.pager .pg-ctl{display:flex;gap:4px;align-items:center} .pager .pg-ctl>span{padding:0 8px;white-space:nowrap}
+.pager button{background:none;border:1px solid var(--line2);border-radius:7px;color:var(--muted);font:14px var(--mono);width:32px;height:30px;cursor:pointer} .pager button:hover:not(:disabled){color:var(--cyan);border-color:var(--cyan)} .pager button:disabled{opacity:.3;cursor:default}
+.pager select{background:rgba(5,8,15,.6);border:1px solid var(--line2);border-radius:7px;color:var(--txt);font:13px var(--mono);padding:4px 6px;margin-left:6px}
+#rd-pager-top{margin-top:22px}
 .about p{font-size:17px;line-height:1.6;color:var(--muted);max-width:760px} .about h3{font-size:17px;margin:22px 0 6px}
 .about code{font-family:var(--mono);font-size:12.5px;color:var(--aligned)}
 footer{margin:30px 0 40px;padding-top:22px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--dim);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
@@ -180,8 +188,9 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   <div class="chart" id="rd-sect" style="display:none;margin-top:14px"><h3 id="rd-sect-title"></h3><div class="sub" id="rd-sect-sub"></div>
     <div class="legend sect-leg"><span><svg width="12" height="12"><circle class="dot" cx="6" cy="6" r="4.5"/></svg>air sample</span><span><svg width="12" height="12"><rect class="dot" x="1.5" y="1.5" width="9" height="9"/></svg>settled-dust sample</span><span><svg width="12" height="12"><circle class="dot" cx="6" cy="6" r="4.5"/></svg>filled: asbestos found</span><span><svg width="12" height="12"><circle class="dot nd" cx="6" cy="6" r="4.5"/></svg>hollow: none detected</span><span>one mark per sample, placed on the floor it was taken from</span></div><div id="rd-sect-svg"></div><div class="tip" id="rd-sect-tip"></div></div>
   <div class="tbl" id="rd-byschool" style="display:none"></div>
-  <div class="tbl"><table id="rd-table"><thead><tr><th>School</th><th>Date</th><th>Location / sample</th><th class="num">Value</th><th>Unit</th><th>Note</th><th>Source</th></tr></thead><tbody></tbody></table></div>
-  <button class="more" id="rd-more" style="display:none"></button>
+  <div class="pager" id="rd-pager-top"></div>
+  <div class="tbl"><table id="rd-table"><thead><tr><th class="sort" data-k="s">School</th><th class="sort" data-k="d">Date</th><th class="sort" data-k="l">Location</th><th class="sort" data-k="n">Sample</th><th class="sort num" data-k="v" id="rd-th-v">Value</th><th>Notes</th><th class="sort" data-k="doc">Source page</th></tr></thead><tbody></tbody></table></div>
+  <div class="pager" id="rd-pager"></div>
 </section>
 
 <section id="s-about" class="about">
@@ -224,7 +233,7 @@ function route() {
 }
 
 /* ---------- lab readings ---------- */
-let RD = null, rdPage = 0;
+let RD = null, rdPage = 0;  // rdRows/rdSort/rdPer live next to renderTable
 const ANALYTE_LABEL = {asbestos: "Asbestos in air (TEM)", dioxin_TCDD_eq: "Dioxin on surfaces (2,3,7,8-TCDD eq.)", lead: "Lead on surfaces (dust wipes)", lead_air: "Lead in air (NIOSH 7082)",
   PM2_5: "Respirable particulates PM₂.₅", "PM2.5": "Respirable particulates PM₂.₅", CO2: "Carbon dioxide", CO: "Carbon monoxide", temperature: "Temperature",
   relative_humidity: "Relative humidity", TVOC: "Total volatile organic compounds", mercury: "Mercury vapor", lead_metals_panel: "Lead in air (metals panel)", asbestos_bulk: "Asbestos in settled dust, bulk PLM (handwritten sheets; floor 1 %)", dust_fiberglass: "Fiberglass in settled dust (handwritten custody forms)", dust_asbestos_plm: "Asbestos found in settled dust (custody forms)"};
@@ -257,6 +266,7 @@ async function loadReadings(analyte, school) {
   if (school != null && [...$("rd-school").options].some(o => o.value === school)) $("rd-school").value = school;
   rdPage = 0; renderReadings();
 }
+const fmtv = v => v >= 100 ? Math.round(v).toLocaleString() : v >= 1 ? +v.toFixed(2) : v.toPrecision(2);
 const median = v => { const a = [...v].sort((p, q) => p - q); return a.length ? a[Math.floor(a.length / 2)] : NaN; };
 function renderFloor(nd) {
   const el = $("rd-floor"); if (nd.length < 5) { el.style.display = "none"; return; } el.style.display = "";
@@ -330,7 +340,6 @@ function renderReadings() {
   const xd = d => L + (W - L - R) * (Date.parse(d) - t0) / ((t1 - t0) || 1);
   const ticks = useLog ? [...new Set([vmin, vmax].concat([0.001,0.01,0.1,1,10,100,1000,10000].filter(t => t >= vmin && t <= vmax)))] : [0, .25, .5, .75, 1].map(f => vmax * f);
   const months = []; for (let d = new Date(t0); d <= new Date(t1); d.setMonth(d.getMonth() + 1)) months.push(new Date(d.getFullYear(), d.getMonth(), 1));
-  const fmtv = v => v >= 100 ? Math.round(v).toLocaleString() : v >= 1 ? +v.toFixed(2) : v.toPrecision(2);
   $("rd-svg").innerHTML = rows.length ? `<svg viewBox="0 0 ${W} ${H}">
     ${ticks.map(t => `<line class="grid" x1="${L}" x2="${W - R}" y1="${yv(t)}" y2="${yv(t)}"/><text class="axis" x="${L - 6}" y="${yv(t) + 3}" text-anchor="end">${fmtv(t)}</text>`).join("")}
     ${months.filter((m, i) => i % Math.ceil(months.length / 12) === 0).map(m => `<text class="axis" x="${xd(m)}" y="${H - 10}">${m.toLocaleString("en-US", {month: "short", year: "2-digit"})}</text>`).join("")}
@@ -354,18 +363,38 @@ function renderReadings() {
       Object.entries(by).sort((p, q) => q[1].n - p[1].n).map(([sname, b]) => `<tr><td>${esc(sname)}</td><td class="num">${fmt(b.n)}</td>${hasND ? `<td class="num">${b.det}</td>` : ""}<td class="num">${b.max != null ? fmtv(b.max) + " " + esc(unit) : "—"}</td><td>${b.d0} … ${b.d1}</td></tr>`).join("")}</tbody></table>`;
     $("rd-byschool").style.display = "";
   } else $("rd-byschool").style.display = "none";
-  const byVal = [...rows].sort((p, q) => (q.v - p.v) || p.d.localeCompare(q.d)); const PAGE = 60, slice = byVal.slice(0, (rdPage + 1) * PAGE);
-  const note = r => [r.x && r.x.type && r.x.type !== "None Detected" ? r.x.type.toLowerCase() : "", r.x && r.x.n_gt5 ? `${r.x.n_gt5} structures >5µ` : "",
+  rdRows = rows; rdUnit = unit; renderTable();
+}
+let rdRows = [], rdUnit = "", rdSort = {k: "v", dir: -1}, rdPer = 50;
+const cmp = {
+  s: (p, q) => p.s.localeCompare(q.s), d: (p, q) => p.d.localeCompare(q.d), doc: (p, q) => (p.doc || p.f).localeCompare(q.doc || q.f),
+  l: (p, q) => (p.l ? 0 : 1) - (q.l ? 0 : 1) || (p.l || "").localeCompare(q.l || "", undefined, {numeric: true}),
+  n: (p, q) => (p.n != null ? 0 : 1) - (q.n != null ? 0 : 1) || String(p.n ?? "").localeCompare(String(q.n ?? ""), undefined, {numeric: true}),
+  v: (p, q) => ((p.q ? 0 : 1) - (q.q ? 0 : 1)) || (p.v - q.v),  // detections rank above non-detects, then by value
+};
+function renderTable() {
+  const rows = [...rdRows].sort((p, q) => rdSort.dir * cmp[rdSort.k](p, q) || p.d.localeCompare(q.d));
+  const pages = Math.max(1, Math.ceil(rows.length / rdPer)); rdPage = Math.min(rdPage, pages - 1);
+  const slice = rows.slice(rdPage * rdPer, (rdPage + 1) * rdPer);
+  const note = r => [r.q ? "none detected" : "", r.x && r.x.type && r.x.type !== "None Detected" ? r.x.type.toLowerCase() : "", r.x && r.x.n_gt5 ? `${r.x.n_gt5} structures >5µ` : "",
     r.x && r.x.min != null ? `range ${fmtv(r.x.min)}–${fmtv(r.x.max)}` : "", r.x && r.x.outdoor_max != null ? `outdoor ${fmtv(r.x.outdoor_min)}–${fmtv(r.x.outdoor_max)}` : "",
     r.x && r.x.ocr_corrected_from != null ? `OCR fixed from ${r.x.ocr_corrected_from}` : "", r.x && r.x.outside_narrative_range ? "⚠ outside report's stated range" : "", r.inf ? "school inferred" : "",
-    r.x && r.x.handwritten ? `handwritten, read by model (${r.x.legibility || "?"})` : "", r.x && r.x.custody_doc ? "room from custody form" : "", r.x && r.x.result_text ? `"${r.x.result_text}"` : "",
-    r.x && r.x.cellulose_pct != null ? `cellulose ${r.x.cellulose_pct}%` : "", r.x && r.x.fiberglass_pct != null ? `fiberglass ${r.x.fiberglass_pct}%` : ""].filter(Boolean).join("; ");
-  $("rd-table").querySelector("tbody").innerHTML = slice.map(r => `<tr class="rowlink" data-u="${pdfLink(r)}"><td>${esc(r.s)}</td><td class="d">${r.d}</td><td>${esc(r.l || "")}${r.n ? ` <span style="font-family:var(--mono);font-size:11px;color:var(--dim)">#${esc(r.n)}</span>` : ""}</td>
-    <td class="num">${r.q}${fmtv(r.v)}</td><td>${esc(r.u)}</td><td>${esc(note(r))}</td><td><a href="${pdfLink(r)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:11px;text-decoration:none">${esc(r.doc || r.f.replace(".pdf", ""))}</a></td></tr>`).join("");
+    r.x && r.x.handwritten ? `handwritten, ${r.x.legibility || "?"} legibility` : "", r.x && r.x.custody_doc ? "room from custody form" : "", r.x && r.x.result_text ? `"${r.x.result_text}"` : "",
+    r.x && r.x.cellulose_pct != null ? `cellulose ${r.x.cellulose_pct}%` : "", r.x && r.x.fiberglass_pct != null ? `fiberglass ${r.x.fiberglass_pct}%` : ""].filter(Boolean);
+  $("rd-th-v").textContent = rdUnit ? `Value (${rdUnit})` : "Value";
+  document.querySelectorAll("#rd-table th.sort").forEach(th => { th.classList.toggle("on", th.dataset.k === rdSort.k); th.dataset.dir = th.dataset.k === rdSort.k ? (rdSort.dir > 0 ? "▲" : "▼") : ""; });
+  $("rd-table").querySelector("tbody").innerHTML = slice.map(r => `<tr class="rowlink" data-u="${pdfLink(r)}"><td>${esc(r.s)}</td><td class="d">${r.d}</td><td>${esc(r.l || "")}</td><td class="mono">${r.n != null ? esc(r.n) : ""}</td>
+    <td class="num${r.q ? " nd" : ""}">${r.q}${fmtv(r.v)}</td><td class="notes">${note(r).map(n => `<span>${esc(n)}</span>`).join("")}</td><td><a class="mono" href="${pdfLink(r)}" target="_blank" rel="noopener">${esc((r.doc || r.f.replace(".pdf", "")).replace("NYC-WTC_", ""))}<small> p.${r.p}</small></a></td></tr>`).join("")
+    || `<tr><td colspan="7" class="hint">No readings for this selection.</td></tr>`;
   $("rd-table").querySelectorAll("tr.rowlink").forEach(tr => tr.onclick = e => { if (!e.target.closest("a")) window.open(tr.dataset.u, "_blank"); });
-  const more = $("rd-more"); more.style.display = slice.length < byVal.length ? "block" : "none";
-  more.textContent = `Show ${fmt(Math.min(PAGE, byVal.length - slice.length))} more of ${fmt(byVal.length - slice.length)}`; more.onclick = () => { rdPage++; renderReadings(); };
+  const lo = rows.length ? rdPage * rdPer + 1 : 0, hi = Math.min(rows.length, (rdPage + 1) * rdPer);
+  const pager = (top) => `<span class="pg-info">${fmt(lo)}–${fmt(hi)} of ${fmt(rows.length)}</span><span class="pg-ctl"><button data-p="0" ${rdPage === 0 ? "disabled" : ""}>«</button><button data-p="${rdPage - 1}" ${rdPage === 0 ? "disabled" : ""}>‹</button><span>page ${fmt(rdPage + 1)} of ${fmt(pages)}</span><button data-p="${rdPage + 1}" ${rdPage >= pages - 1 ? "disabled" : ""}>›</button><button data-p="${pages - 1}" ${rdPage >= pages - 1 ? "disabled" : ""}>»</button></span>${top ? `<label class="pg-per">rows per page <select>${[25, 50, 100, 250].map(n => `<option ${n === rdPer ? "selected" : ""}>${n}</option>`).join("")}</select></label>` : ""}`;
+  $("rd-pager-top").innerHTML = pager(true); $("rd-pager").innerHTML = rows.length > rdPer ? pager(false) : "";
+  document.querySelectorAll(".pager button").forEach(bt => bt.onclick = () => { rdPage = +bt.dataset.p; renderTable(); if (bt.closest("#rd-pager")) $("rd-pager-top").scrollIntoView({behavior: "smooth", block: "start"}); });
+  const per = document.querySelector(".pg-per select"); if (per) per.onchange = () => { rdPer = +per.value; rdPage = 0; renderTable(); };
 }
+document.querySelector("#rd-table thead").addEventListener("click", e => { const th = e.target.closest("th.sort"); if (!th) return;
+  const k = th.dataset.k; rdSort = {k, dir: rdSort.k === k ? -rdSort.dir : (k === "v" ? -1 : 1)}; rdPage = 0; renderTable(); });
 window.addEventListener("hashchange", route);
 
 /* ---------- navigator ---------- */

@@ -55,5 +55,6 @@ Flat tables for reuse: `docs/data/custody.jsonl` (chain-of-custody rows) and `do
 Readings dropdown is grouped Air vs Settled dust & surfaces (asbestos bulk PLM, chrysotile dust, fiberglass dust, dioxin wipes, lead wipes); dust analytes get a by-school detects table. PLM non-detects plot at the 1 % reporting floor; air lead (`lead_air`, µg/m³) is split from wipes (`lead`, µg/ft²).
 Reference lines live in `GUIDELINES` in build_site.py as (value, unit, label, kind, plain-language meaning); kind is health / regulatory / comfort / none and drives the badge under each chart.
 `docs/data/school_sites.json` (school pins for the map) is written by `build_school_sites()` from `SCHOOL_ADDR` in build_site.py; readings deep links take `#readings/<analyte>/<school>`. Timeline event markers are the `EVENTS` list in index.html; the floor chart parses floors from location text in `floorOf()`.
+Readings table: click a header to sort (value sort ranks detections above non-detects); pager with 25/50/100/250 rows per page, state in rdSort/rdPage/rdPer.
 Accuracy disclaimer on the Readings tab is computed live from `extra` flags (handwritten, legibility, ocr_corrected_from, outside_narrative_range, inf).
 Handwritten rows carry `legibility` good/fair/poor and the transcriber's notes live in `data/pages/out/*.jsonl`.
