@@ -270,6 +270,35 @@ def build_readings():
     (SITE / "readings.json").write_text(json.dumps({"n_reports": len(reports), "guidelines": GUIDELINES, "analytes": analytes.most_common(),
                                                    "rows": out}, ensure_ascii=False), encoding="utf-8")
     print(f"readings: {len(out)} unique rows ({sum(dup.values()) - len(dup)} duplicate copies dropped) from {len(reports)} reports; analytes {analytes.most_common(8)}")
+    build_school_sites(out)
+
+
+SCHOOL_ADDR = {  # schools with lab readings -> street address (for the map). Schools outside Lower Manhattan are left off.
+    "Stuyvesant High School": "345 Chambers Street", "P.S. 89M": "201 Warren Street", "P.S. 234M": "292 Greenwich Street",
+    "High School for Leadership and Public Service": "90 Trinity Place", "High School of Economics and Finance": "100 Trinity Place",
+    "P.S. 150M": "334 Greenwich Street", "P.S. 42M (Benjamin Altman)": "71 Hester Street", "P.S. 1M (Alfred E. Smith)": "8 Henry Street",
+    "I.S. 131M (Dr. Sun Yat Sen)": "100 Hester Street", "P.S. 126M (Jacob Riis)": "80 Catherine Street", "P.S. 2M (Meyer London)": "122 Henry Street",
+    "P.S. 124M (Yung Wing)": "40 Division Street", "P.S. 130M (DeSoto)": "143 Baxter Street", "Murray Bergtraum High School": "411 Pearl Street",
+}
+DUST_ANALYTES = ("asbestos_bulk", "dust_asbestos_plm", "dust_fiberglass")
+
+
+def build_school_sites(out):
+    """docs/data/school_sites.json: one pin per school with sample counts, for the map tab."""
+    cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
+    sites = []
+    for name, addr in SCHOOL_ADDR.items():
+        rs = [r for r in out if r["s"] == name]
+        if not rs: continue
+        g = geocode(addr, cache)
+        if not g: print("  school geocode fail", name, addr); continue
+        air = [r for r in rs if r["a"] == "asbestos"]; dust = [r for r in rs if r["a"] in DUST_ANALYTES]
+        dates = sorted(r["d"] for r in rs if r["d"])
+        sites.append({"name": name, "addr": addr, "lat": g["lat"], "lon": g["lon"], "n": len(rs), "air": len(air), "air_det": sum(1 for r in air if r["q"] == ""),
+                      "dust": len(dust), "dust_det": sum(1 for r in dust if r["q"] == ""), "first": dates[0] if dates else None, "last": dates[-1] if dates else None})
+    CACHE.write_text(json.dumps(cache))
+    (SITE / "school_sites.json").write_text(json.dumps(sites, ensure_ascii=False), encoding="utf-8")
+    print(f"school sites: {len(sites)} geocoded")
 
 
 if __name__ == "__main__":
