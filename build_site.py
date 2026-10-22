@@ -169,18 +169,37 @@ def build_schools(rows):
 
 # ---------- lab readings (from parse_reports.py) ----------
 READINGS = Path("data/readings.jsonl")
-GUIDELINES = {  # analyte -> (value, unit, label) drawn as a reference line on the chart
-    "asbestos": (0.01, "S/cc", "typical lab sensitivity ~0.004–0.01 S/cc; AHERA clearance is 70 S/mm²"),
-    "dioxin_TCDD_eq": (25, "ng/m2", "NYSDOH surface guideline 25 ng/m²"),
-    "CO2": (1000, "ppm", "ASHRAE 62: outdoor + 700 ppm (≈1,000–1,100)"),
-    "CO": (9, "ppm", "EPA NAAQS / ASHRAE 9 ppm"),
-    "PM2.5": (65, "ug/m3", "EPA 24-h NAAQS 65 µg/m³ (40 for sensitive groups)"),
-    "TVOC": (1, "ppm", "AIHA 1 ppm"),
-    "lead": (40, "ug/ft2", "HUD/NYC floor clearance 40 µg/ft²"),
-    "lead_air": (30, "ug/m3", "OSHA action level 30 µg/m³ (8-h)"),
-    "temperature": (79, "F", "ASHRAE 55 summer 73–79 °F"), "relative_humidity": (60, "%", "ASHRAE 55 30–60 %"),
-    "asbestos_bulk": (1, "%", "NYC/EPA: material is asbestos-containing at >1 %"),
+GUIDELINES = {  # analyte -> (line value or None, unit, short label, kind, plain-language meaning). kind: health | regulatory | comfort | none
+    "asbestos": (0.0009, "S/cc", "EPA WTC indoor-air health benchmark 0.0009 S/cc", "health",
+        "EPA's World Trade Center task force (2003) set 0.0009 structures per cc of air as the level where breathing it for 30 years keeps added cancer risk under 1 in 10,000. "
+        "It is a long-term line, not a safe/unsafe border for one day. Each hollow dot is a sample that found nothing, drawn at its own detection floor, about 0.0045: five times above the line. "
+        "So this testing could not have seen contamination at EPA's benchmark. A filled dot is one or two fibers counted, which the method cannot tell apart from zero."),
+    "asbestos_bulk": (1, "%", "Legal definition of asbestos-containing material: >1 %", "regulatory",
+        "Federal and NYC rules call a material 'asbestos-containing' above 1 % by polarized-light microscopy. That is a definition for regulating building products, not a health threshold; there is no safe share of asbestos in dust you can breathe. "
+        "PLM also cannot see below about 1 %, so hollow dots on the line mean 'under 1 %'. WTC dust itself ran roughly 0.8 to 3 % asbestos, right at this floor. Filled dots under the line are 'trace' calls."),
+    "dust_asbestos_plm": (None, "", "", "none", "Qualitative result only: the lab wrote 'chrysotile' on the custody form with no percentage. Drawn at 1 as a marker. No reference line exists for this."),
+    "dust_fiberglass": (None, "", "", "none", "'None detected' or 'trace' calls for fiberglass in settled dust. Fiberglass is a skin and airway irritant, not regulated like asbestos, so there is no line."),
+    "dioxin_TCDD_eq": (25, "ng/m2", "NYSDOH indoor surface guideline 25 ng/m\u00b2", "health",
+        "New York State Health Department's guideline for dioxin-like compounds on indoor surfaces, set so a child's hand-to-mouth contact over years stays within the state's cancer-risk goal. Below the line is within that goal; above it the state recommends cleaning. Every school reading here is hundreds to a million times below it."),
+    "lead": (40, "ug/ft2", "HUD/NYC floor-dust clearance 40 \u00b5g/ft\u00b2 (2001)", "regulatory",
+        "The floor-dust level a room had to pass after lead work in 2001, based on children's hand-to-mouth exposure. Below passes, above gets re-cleaned. Not a safe/harmless line: EPA has since lowered clearance to 10 (2019) and 5 \u00b5g/ft\u00b2 (2024)."),
+    "lead_air": (30, "ug/m3", "OSHA action level 30 \u00b5g/m\u00b3 (8-h average)", "regulatory",
+        "The workplace level above which employers must start air monitoring and medical checks. Written for adult workers on an 8-hour shift. There is no school-specific lead-in-air standard."),
+    "lead_metals_panel": (0.03, "mg/m3", "OSHA action level 0.03 mg/m\u00b3", "regulatory", "Same OSHA workplace action level as the lead-in-air chart, in the lab's mg/m\u00b3 units. Values far above it on this chart are almost certainly text-recognition errors; open the page before quoting one."),
+    "PM2.5": (65, "ug/m3", "EPA 24-h fine-particle standard 65 \u00b5g/m\u00b3 (2001)", "health",
+        "EPA's 24-hour outdoor standard for fine particles at the time (lowered to 35 in 2006). Particles this small reach deep into the lung. Below the line, no effect expected in healthy people; children and people with asthma see effects from about 40."),
+    "CO2": (1000, "ppm", "ASHRAE ventilation guideline \u22481,000 ppm", "comfort",
+        "Not a toxicity line. CO\u2082 is a proxy for how much fresh air a room gets: indoor about 700 ppm above outdoor (roughly 1,000 to 1,100 total) means ventilation meets ASHRAE's standard. Above it the room is stuffy and under-ventilated, which also means anything else in the air is not being diluted."),
+    "CO": (9, "ppm", "EPA / ASHRAE 9 ppm (8-h)", "health", "EPA's outdoor 8-hour standard, used indoors by ASHRAE. Below it, no expected effect in healthy people. Above it for hours, carbon monoxide starts to displace oxygen in the blood, first for people with heart disease."),
+    "TVOC": (1, "ppm", "AIHA rule of thumb 1 ppm", "comfort",
+        "A rule of thumb for the sum of all volatile organic compounds (solvents, cleaners, off-gassing). Above it, people typically report odor and irritation. Not a health standard, because which compounds are present matters more than the total."),
+    "temperature": (79, "F", "ASHRAE 55 summer comfort upper bound 79 \u00b0F", "comfort", "Upper edge of ASHRAE's summer comfort range (73 to 79 \u00b0F). Comfort, not safety."),
+    "relative_humidity": (60, "%", "ASHRAE 55 comfort upper bound 60 %", "comfort", "Upper edge of ASHRAE's comfort range (30 to 60 %). Sustained humidity above 60 % raises mold risk."),
+    "mercury": (0.3, "ug/m3", "EPA reference concentration 0.3 \u00b5g/m\u00b3", "health", "EPA's lifetime inhalation reference level for mercury vapor: continuous exposure below it is not expected to cause harm."),
 }
+METAL_NOTE = "No school or indoor standard exists for this metal; OSHA workplace limits are far above anything measured here. Very large values on this chart are likely text-recognition errors; open the page before quoting one."
+for _m in ["aluminum", "cadmium", "chromium", "cobalt", "copper", "iron", "magnesium", "manganese", "molybdenum", "nickel", "zinc"]:
+    GUIDELINES[_m] = (None, "", "", "none", METAL_NOTE)
 
 
 def handwritten_rows():

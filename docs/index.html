@@ -103,6 +103,8 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:12px} td.d{whit
 .chk input{accent-color:var(--cyan)}
 .chart .dot{fill:var(--cyan);stroke:var(--cyan);stroke-width:1.5;cursor:pointer;opacity:.8} .chart .dot:hover{opacity:1}
 .chart .dot.nd{fill:transparent;opacity:.55}
+.chart .guide{font-size:13px;color:var(--muted);line-height:1.5;margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px}
+.kind{font:10px var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--gold);color:var(--gold);margin-right:6px;white-space:nowrap} .kind.k-none{border-color:var(--line);color:var(--dim)}
 .chart .ref{stroke:var(--gold);stroke-dasharray:4 4;stroke-width:1} .chart .reflbl{font:10px var(--mono);fill:var(--gold)}
 tr.rowlink{cursor:pointer} tr.rowlink:hover td{color:var(--txt)}
 .about p{font-size:15px;line-height:1.65;color:var(--muted);max-width:760px} .about h3{font-size:17px;margin:22px 0 6px}
@@ -155,7 +157,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
 </section>
 
 <section id="s-readings">
-  <p class="note">Every number ATC's lab reports gave the Board of Education: asbestos in air, dioxin on surfaces, lead, metals, and the indoor-air sweeps (CO₂, CO, particulates, temperature, humidity) from the typed results tables of 754 reports, plus settled-dust results and room locations read off 628 handwritten chain-of-custody and microscopy sheets. Hollow dots are below detection. Rows read from handwriting say so, with a legibility grade. Click a dot or a row to open the page it came from.</p>
+  <p class="note">Every number ATC's lab reports gave the Board of Education: asbestos in air, dioxin on surfaces, lead, metals, and the indoor-air sweeps (CO₂, CO, particulates, temperature, humidity) from the typed results tables of 754 reports, plus settled-dust results and room locations read off 628 handwritten chain-of-custody and microscopy sheets. Hollow dots are below detection. The yellow dashed line is a reference, not a safe/unsafe border: the caption under each chart says whether it is a health limit, a legal clearance level, or a comfort guideline, and what crossing it means. Rows read from handwriting say so, with a legibility grade. Click a dot or a row to open the page it came from.</p>
   <div class="stats" id="rd-stats"></div>
   <div class="ctl">
     <select class="filter" id="rd-analyte"></select>
@@ -163,7 +165,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
     <label class="chk"><input type="checkbox" id="rd-log" checked /> log scale</label>
     <label class="chk"><input type="checkbox" id="rd-nd" checked /> show non-detects</label>
   </div>
-  <div class="chart" id="rd-chart"><h3 id="rd-title"></h3><div class="sub" id="rd-sub"></div><div id="rd-svg"></div><div class="tip" id="rd-tip"></div></div>
+  <div class="chart" id="rd-chart"><h3 id="rd-title"></h3><div class="sub" id="rd-sub"></div><div id="rd-svg"></div><div class="tip" id="rd-tip"></div><p class="guide" id="rd-guide"></p></div>
   <div class="tbl" id="rd-byschool" style="display:none"></div>
   <div class="tbl"><table id="rd-table"><thead><tr><th>School</th><th>Date</th><th>Location / sample</th><th class="num">Value</th><th>Unit</th><th>Note</th><th>Source</th></tr></thead><tbody></tbody></table></div>
   <button class="more" id="rd-more" style="display:none"></button>
@@ -238,10 +240,12 @@ function renderReadings() {
   const a = $("rd-analyte").value, sch = $("rd-school").value, log = $("rd-log").checked, nd = $("rd-nd").checked;
   let rows = RD.rows.filter(r => r.a === a && r.v != null && r.d && (!sch || r.s === sch) && (nd || r.q === "") && !(r.x && r.x.blank));
   rows.sort((p, q) => p.d.localeCompare(q.d));
-  const g = RD.guidelines[a]; const unit = rows[0] ? rows[0].u : "";
+  const g0 = RD.guidelines[a], g = g0 && g0[0] != null ? g0 : null; const unit = rows[0] ? rows[0].u : "";
   $("rd-title").textContent = (ANALYTE_LABEL[a] || a) + (sch ? " · " + sch : "");
   const ndn = rows.filter(r => r.q !== "").length;
   $("rd-sub").textContent = `${fmt(rows.length)} readings${ndn ? `, ${fmt(ndn)} below detection (hollow)` : ""}${g ? ". Dashed line: " + g[2] + "." : "."}`;
+  const KIND = {health: "Health limit", regulatory: "Legal clearance level", comfort: "Comfort guideline", none: "No reference line"};
+  $("rd-guide").innerHTML = g0 ? `<span class="kind k-${g0[3]}">${KIND[g0[3]] || ""}</span> ${esc(g0[4])}` : "";
   const W = 960, H = 300, L = 56, R = 10, T = 14, B = 30;
   const dates = rows.map(r => Date.parse(r.d)); let t0 = Math.min(...dates), t1 = Math.max(...dates); if (t1 - t0 < 864e5 * 30) { t0 -= 864e5 * 15; t1 += 864e5 * 15; }
   const vals = rows.map(r => r.v).filter(v => v > 0); const vmin = Math.min(...vals, g ? g[0] : Infinity), vmax = Math.max(...vals, g ? g[0] : -Infinity);
