@@ -108,6 +108,12 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px} td.d{whit
 .chart .dot.nd{fill:transparent;opacity:.55}
 .chart .guide{font-size:15px;color:var(--muted);line-height:1.5;margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px}
 .kind{font:500 11px var(--mono);padding:2px 7px;border-radius:999px;border:1px solid var(--gold);color:var(--gold);margin-right:6px;white-space:nowrap} .kind.k-none{border-color:var(--line);color:var(--dim)}
+.cbs{display:grid;gap:8px;margin:6px 0 10px} .cb{display:grid;grid-template-columns:minmax(140px,34%) 1fr;gap:12px;align-items:center}
+.cb-l{font-size:14px;color:var(--muted);line-height:1.35} .cb-bar{display:flex;align-items:center;gap:8px;min-width:0}
+.cb-bar i{display:block;height:16px;min-width:3px;max-width:calc(100% - 100px);border-radius:3px;background:var(--cyan);opacity:.85;flex:none} .cb-bar i.g{background:var(--gold)}
+.cb-bar span{font:300 12px var(--mono);color:var(--txt);white-space:nowrap} .cb-gap{height:8px}
+.sect-leg{margin:0 0 10px} .sect-leg svg{vertical-align:middle;margin-right:5px;overflow:visible} .sect-leg .dot{fill:var(--cyan);stroke:var(--cyan);stroke-width:1.5;opacity:.85} .sect-leg .dot.nd{fill:transparent;opacity:.6}
+@media (max-width:520px){.cb{grid-template-columns:1fr;gap:4px}}
 .chart .ref{stroke:var(--gold);stroke-dasharray:4 4;stroke-width:1} .chart .reflbl{font:11px var(--mono);fill:var(--gold)}
 tr.rowlink{cursor:pointer} tr.rowlink:hover td{color:var(--txt)}
 .about p{font-size:17px;line-height:1.6;color:var(--muted);max-width:760px} .about h3{font-size:17px;margin:22px 0 6px}
@@ -171,7 +177,8 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   </div>
   <div class="chart" id="rd-chart"><h3 id="rd-title"></h3><div class="sub" id="rd-sub"></div><div id="rd-svg"></div><div class="tip" id="rd-tip"></div><p class="guide" id="rd-guide"></p></div>
   <div class="chart" id="rd-floor" style="display:none;margin-top:14px"><h3>What the test could see, next to what EPA asked for</h3><div class="sub" id="rd-floor-sub"></div><div id="rd-floor-svg"></div></div>
-  <div class="chart" id="rd-sect" style="display:none;margin-top:14px"><h3 id="rd-sect-title"></h3><div class="sub" id="rd-sect-sub"></div><div id="rd-sect-svg"></div><div class="tip" id="rd-sect-tip"></div></div>
+  <div class="chart" id="rd-sect" style="display:none;margin-top:14px"><h3 id="rd-sect-title"></h3><div class="sub" id="rd-sect-sub"></div>
+    <div class="legend sect-leg"><span><svg width="12" height="12"><circle class="dot" cx="6" cy="6" r="4.5"/></svg>air sample</span><span><svg width="12" height="12"><rect class="dot" x="1.5" y="1.5" width="9" height="9"/></svg>settled-dust sample</span><span><svg width="12" height="12"><circle class="dot" cx="6" cy="6" r="4.5"/></svg>filled: asbestos found</span><span><svg width="12" height="12"><circle class="dot nd" cx="6" cy="6" r="4.5"/></svg>hollow: none detected</span><span>one mark per sample, placed on the floor it was taken from</span></div><div id="rd-sect-svg"></div><div class="tip" id="rd-sect-tip"></div></div>
   <div class="tbl" id="rd-byschool" style="display:none"></div>
   <div class="tbl"><table id="rd-table"><thead><tr><th>School</th><th>Date</th><th>Location / sample</th><th class="num">Value</th><th>Unit</th><th>Note</th><th>Source</th></tr></thead><tbody></tbody></table></div>
   <button class="more" id="rd-more" style="display:none"></button>
@@ -255,19 +262,13 @@ function renderFloor(nd) {
   const el = $("rd-floor"); if (nd.length < 5) { el.style.display = "none"; return; } el.style.display = "";
   const EPA = 0.0009, med = median(nd.map(r => r.v)), vols = nd.map(r => r.x && r.x.vol_L).filter(v => v > 0), medVol = median(vols);
   const medK = median(nd.filter(r => r.x && r.x.vol_L > 0).map(r => r.v * r.x.vol_L)), need = Math.round(medK / EPA / 100) * 100;
-  const W = 960, L = 300, R = 120, RH = 30, GAP = 26, T = 10; const pairs = [
-    ["Smallest concentration EPA's benchmark asks a test to catch", EPA, `${EPA} S/cc`, "ref"],
-    ["Smallest concentration these tests could catch (median floor)", med, `${med.toPrecision(2)} S/cc`, "bar"],
-    null,
-    ["Air pumped through a filter (median sample)", medVol, `${fmt(Math.round(medVol))} L`, "bar"],
-    ["Air that would reach EPA's benchmark with the same count", need, `${fmt(need)} L`, "ref"]];
-  const H = T + pairs.length * RH + GAP + 10; let y = T;
-  const row = (lbl, v, txt, cls, max) => { const w = (W - L - R) * v / max, yy = y; y += RH;
-    return `<text class="axis" x="${L - 10}" y="${yy + RH / 2 + 4}" text-anchor="end">${lbl}</text><rect class="${cls === "ref" ? "cmp" : "bar"}" x="${L}" y="${yy + 6}" width="${Math.max(2, w).toFixed(1)}" height="${RH - 12}"/><text class="axis" x="${L + Math.max(2, w) + 8}" y="${yy + RH / 2 + 4}">${txt}</text>`; };
-  let svg = "";
-  svg += row(...pairs[0], med); svg += row(...pairs[1], med); y += GAP;
-  svg += row(...pairs[3], need); svg += row(...pairs[4], need);
-  $("rd-floor-svg").innerHTML = `<svg viewBox="0 0 ${W} ${H}">${svg}</svg>`;
+  const row = (lbl, v, max, txt, gold) => `<div class="cb"><div class="cb-l">${lbl}</div><div class="cb-bar"><i class="${gold ? "g" : ""}" style="width:${(72 * v / max).toFixed(1)}%"></i><span>${txt}</span></div></div>`;
+  $("rd-floor-svg").innerHTML = `<div class="cbs">
+    ${row("Concentration EPA's benchmark asks a test to catch", EPA, med, `${EPA} S/cc`, true)}
+    ${row("Smallest concentration these tests could catch", med, med, `${med.toPrecision(2)} S/cc`, false)}
+    <div class="cb-gap"></div>
+    ${row("Air pumped through the filter, typical sample", medVol, need, `${fmt(Math.round(medVol))} L`, false)}
+    ${row("Air needed to reach EPA's benchmark", need, need, `${fmt(need)} L`, true)}</div>`;
   $("rd-floor-sub").textContent = `A TEM test pumps air through a filter and counts fibers under the microscope. Zero fibers does not mean zero asbestos; it means less than one fiber in the air examined, so the smallest amount a test can catch is set by how much air was pumped. ` +
     `These ${fmt(nd.length)} samples found nothing, and each could only have caught about ${(med / EPA).toFixed(1)} times more asbestos than EPA's World Trade Center indoor benchmark. Anything between the two bars would have read as "none detected".`;
 }
@@ -302,7 +303,7 @@ function renderSection(school, isDefault) {
       return o.r.a === "asbestos" ? `<circle class="dot${det ? "" : " nd"}" cx="${x}" cy="${y}" r="4" data-i="${i}"/>` : `<rect class="dot${det ? "" : " nd"}" x="${x - 3.5}" y="${y - 3.5}" width="7" height="7" data-i="${i}"/>`; }).join("")}</svg>`;
   const n = placed.length, det = placed.filter(o => o.r.q === "").length, unplaced = rows.length - n;
   $("rd-sect-title").textContent = `Where the asbestos samples were taken: ${school}`;
-  $("rd-sect-sub").textContent = `${fmt(n)} samples with a readable location, by floor and date. Circles are air, squares are settled dust; filled means asbestos was found (${det}). ${unplaced ? fmt(unplaced) + " more samples had no floor in their location text. " : ""}${isDefault ? "Pick a school above to change." : ""}`;
+  $("rd-sect-sub").textContent = `${fmt(n)} samples with a readable location, by floor and date. Asbestos was found in ${det}. ${unplaced ? fmt(unplaced) + " more samples had no floor in their location text. " : ""}${isDefault ? "Pick a school above to change." : ""}`;
   const tip = $("rd-sect-tip"), svg = $("rd-sect-svg").firstElementChild;
   svg.addEventListener("mousemove", e => { const c = e.target.closest(".dot"); if (!c) { tip.style.display = "none"; return; }
     const r = placed[+c.dataset.i].r; tip.textContent = `${r.d} · ${r.l} · ${r.q}${r.v} ${r.u}`; tip.style.display = "block";
