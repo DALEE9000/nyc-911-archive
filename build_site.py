@@ -183,12 +183,17 @@ GUIDELINES = {  # analyte -> (value, unit, label) drawn as a reference line on t
 
 def build_readings():
     if not READINGS.exists(): print("no readings.jsonl; skip"); return
-    out, reports = [], set()
+    out, reports, seen_keys, dup = [], set(), set(), {}
     for line in READINGS.open(encoding="utf-8"):
         r = json.loads(line); reports.add(r["file"])
         e = r.get("extra", {})
         if r["template"] == "metals_air" and r["analyte"] == "lead": r["analyte"] = "lead_metals_panel"
         if r["analyte"] == "asbestos" and r["value"] == 0 and not r["qual"]: r["qual"] = "<"; r["value"] = e.get("sensitivity_S_cc") or 0.0044
+        if r["location"]: r["location"] = re.sub(r"(?<=\d)[^\w\s,/()&#.-]{1,3}", "", r["location"]).replace("Mam ", "Main ").strip(" ,")
+        # the portal holds several scanned copies of many reports; keep one per (school, date, analyte, location/sample, value)
+        key = (r["school"], r["date"], r["analyte"], (r["location"] or "").lower().replace(" ", ""), r["sample"], r["value"], r["qual"])
+        if key in seen_keys: dup[key] = dup.get(key, 1) + 1; continue
+        seen_keys.add(key)
         out.append({"s": r["school"] or "Unknown", "d": r["date"], "t": r["template"], "a": r["analyte"], "v": r["value"], "q": r["qual"],
                     "u": r["unit"], "l": r["location"], "n": r["sample"], "f": r["file"], "p": r["page"], "doc": r["doc"],
                     "x": {k: e[k] for k in ("min", "max", "outdoor_min", "outdoor_max", "type", "n_05_5", "n_gt5", "vol_L", "blank",
@@ -197,7 +202,7 @@ def build_readings():
     analytes = collections.Counter(r["a"] for r in out)
     (SITE / "readings.json").write_text(json.dumps({"n_reports": len(reports), "guidelines": GUIDELINES, "analytes": analytes.most_common(),
                                                    "rows": out}, ensure_ascii=False), encoding="utf-8")
-    print(f"readings: {len(out)} rows from {len(reports)} reports; analytes {analytes.most_common(8)}")
+    print(f"readings: {len(out)} unique rows ({sum(dup.values()) - len(dup)} duplicate copies dropped) from {len(reports)} reports; analytes {analytes.most_common(8)}")
 
 
 if __name__ == "__main__":

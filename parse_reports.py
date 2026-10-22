@@ -201,7 +201,7 @@ def parse_file(path):
 
 
 SCHOOLS = [  # (regex on raw name, canonical label, DOE building code)
-    (r"stuy|stry|m477|chambers", "Stuyvesant High School", "M477"), (r"(?<!\d)89\s?m?(?!\d)|warren|ssm 20i|\bbom\b", "P.S. 89M", "M089"),
+    (r"stuy|stry|smyv|m477|chambers|sca/s", "Stuyvesant High School", "M477"), (r"(?<!\d)89\s?m?(?!\d)|warren|ssm 20i|\bbom\b", "P.S. 89M", "M089"),
     (r"(?<!\d)234\s?m?(?!\d)|292 greenwich", "P.S. 234M", "M234"), (r"(?<!\d)150\s?m?(?!\d)|isom", "P.S. 150M", "M150"),
     (r"econ|m833|833m|100 trinity", "High School of Economics and Finance", "M833"),
     (r"leadership|m894|894m|90 trinity", "High School for Leadership and Public Service", "M894"),
