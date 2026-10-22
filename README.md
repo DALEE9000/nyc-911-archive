@@ -58,3 +58,7 @@ Reference lines live in `GUIDELINES` in build_site.py as (value, unit, label, ki
 Readings table: click a header to sort (value sort ranks detections above non-detects); pager with 25/50/100/250 rows per page, state in rdSort/rdPage/rdPer.
 Accuracy disclaimer on the Readings tab is computed live from `extra` flags (handwritten, legibility, ocr_corrected_from, outside_narrative_range, inf).
 Handwritten rows carry `legibility` good/fair/poor and the transcriber's notes live in `data/pages/out/*.jsonl`.
+
+## Routes
+
+Hash routes: `#navigator[/agency[/box|folder]]`, `#map`, `#schools`, `#readings[/analyte[/school]]`, `#about`. `#aid` is an alias kept for old links.

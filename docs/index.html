@@ -141,12 +141,12 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
     This is the archive map that goes with it: every box and folder, every building with a file, and the school air-testing campaign laid out in time.</p>
   <div class="stats" id="stats"></div>
   <nav id="nav">
-    <a href="#aid" data-s="aid">Navigator</a><a href="#map" data-s="map">Building map</a>
+    <a href="#navigator" data-s="navigator">Navigator</a><a href="#map" data-s="map">Building map</a>
     <a href="#schools" data-s="schools">School testing</a><a href="#readings" data-s="readings">Lab readings</a><a href="#about" data-s="about">About the data</a>
   </nav>
 </header>
 
-<section id="s-aid">
+<section id="s-navigator">
   <p class="note">The city tagged each DEP and DCAS record with the physical box and folder it was scanned from. Those labels are the only structure the archive has, and the official site hides them. Pick an agency, open a box, click a folder.</p>
   <div class="aid">
     <div class="panel">
@@ -226,9 +226,9 @@ function show(s) {
   if (s === "map" && map) setTimeout(() => map.invalidateSize(), 50);
 }
 function route() {
-  const h = location.hash.slice(1) || "aid"; const [s, ...rest] = h.split("/");
-  show(["aid","map","schools","readings","about"].includes(s) ? s : "aid");
-  if (s === "aid" && rest.length) openFolder(decodeURIComponent(rest[0]), rest.length > 1 ? decodeURIComponent(rest.slice(1).join("/")) : null);
+  const h = (location.hash.slice(1) || "navigator").replace(/^aid(?=\/|$)/, "navigator"); const [s, ...rest] = h.split("/");  // #aid kept as alias for old links
+  show(["navigator","map","schools","readings","about"].includes(s) ? s : "navigator");
+  if (s === "navigator" && rest.length) openFolder(decodeURIComponent(rest[0]), rest.length > 1 ? decodeURIComponent(rest.slice(1).join("/")) : null);
   if (s === "readings") loadReadings(rest[0] ? decodeURIComponent(rest[0]) : null, rest[1] ? decodeURIComponent(rest[1]) : null);
 }
 
@@ -442,8 +442,8 @@ async function openFolder(slug, key) {
     $("docs").scrollIntoView({behavior: "smooth", block: "start"});
   } else { await loadDocs(a); $("docs").style.display = "none"; }
 }
-$("aglist").addEventListener("click", e => { const li = e.target.closest("li"); if (li) location.hash = "aid/" + li.dataset.a; });
-$("boxes").addEventListener("click", e => { const li = e.target.closest("li[data-k]"); if (li) location.hash = "aid/" + cur.agency.slug + "/" + encodeURIComponent(li.dataset.k); });
+$("aglist").addEventListener("click", e => { const li = e.target.closest("li"); if (li) location.hash = "navigator/" + li.dataset.a; });
+$("boxes").addEventListener("click", e => { const li = e.target.closest("li[data-k]"); if (li) location.hash = "navigator/" + cur.agency.slug + "/" + encodeURIComponent(li.dataset.k); });
 $("folder-q").addEventListener("input", e => { const q = e.target.value.toLowerCase(); renderAgencies(q); if (cur.agency) renderBoxes(cur.agency, q); });
 
 /* ---------- map ---------- */
@@ -455,7 +455,7 @@ function buildMap(fc) {
   fc.features.sort((a, b) => b.properties.n - a.properties.n).forEach(f => {
     const p = f.properties, [lon, lat] = f.geometry.coordinates;
     const folders = p.folders.map(([name, n]) => { const ag = p.agencies[0][0]; const box = p.boxes[0][0];
-      return `<li><a href="#aid/${slugOf(ag)}/${encodeURIComponent(box + "|" + name)}">${esc(name)}</a><span class="n">${n}</span></li>`; }).join("");
+      return `<li><a href="#navigator/${slugOf(ag)}/${encodeURIComponent(box + "|" + name)}">${esc(name)}</a><span class="n">${n}</span></li>`; }).join("");
     L.circleMarker([lat, lon], {radius: r(p.n), color: "#22d3ee", weight: 1.5, fillColor: "#22d3ee", fillOpacity: .35})
       .bindPopup(`<div class="pp"><h4>${esc(p.addr)}</h4><div class="m">${fmt(p.n)} docs${p.bin ? " · BIN " + p.bin : ""}${p.block ? " · Block " + p.block + " Lot " + p.lot : ""}</div><ul>${folders}</ul></div>`)
       .addTo(map);
