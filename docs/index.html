@@ -112,7 +112,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px} td.d{whit
 .cb-l{font-size:14px;color:var(--muted);line-height:1.35} .cb-bar{display:flex;align-items:center;gap:8px;min-width:0}
 .cb-bar i{display:block;height:16px;min-width:3px;max-width:calc(100% - 100px);border-radius:3px;background:var(--cyan);opacity:.85;flex:none} .cb-bar i.g{background:var(--gold)}
 .cb-bar span{font:300 12px var(--mono);color:var(--txt);white-space:nowrap} .cb-gap{height:8px}
-.sect-leg{margin:0 0 10px} .sect-leg svg{vertical-align:middle;margin-right:5px;overflow:visible} .sect-leg .dot{fill:var(--cyan);stroke:var(--cyan);stroke-width:1.5;opacity:.85} .sect-leg .dot.nd{fill:transparent;opacity:.6}
+.sect-leg{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0 0 14px;font:300 12.5px var(--mono);color:var(--muted)} .sect-leg span{display:inline-flex;align-items:center;gap:7px;white-space:nowrap} .chart .sect-leg svg{flex:none;width:14px;height:14px;display:inline-block;overflow:visible} .sect-leg .dot{fill:var(--cyan);stroke:var(--cyan);stroke-width:1.5;opacity:.85} .sect-leg .dot.nd{fill:transparent;opacity:.6}
 @media (max-width:520px){.cb{grid-template-columns:1fr;gap:4px}}
 .chart .ref{stroke:var(--gold);stroke-dasharray:4 4;stroke-width:1} .chart .reflbl{font:11px var(--mono);fill:var(--gold)}
 tr.rowlink{cursor:pointer} tr.rowlink:hover td{color:var(--txt)}
@@ -186,7 +186,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   <div class="chart" id="rd-chart"><h3 id="rd-title"></h3><div class="sub" id="rd-sub"></div><div id="rd-svg"></div><div class="tip" id="rd-tip"></div><p class="guide" id="rd-guide"></p></div>
   <div class="chart" id="rd-floor" style="display:none;margin-top:14px"><h3>What the test could see, next to what EPA asked for</h3><div class="sub" id="rd-floor-sub"></div><div id="rd-floor-svg"></div></div>
   <div class="chart" id="rd-sect" style="display:none;margin-top:14px"><h3 id="rd-sect-title"></h3><div class="sub" id="rd-sect-sub"></div>
-    <div class="legend sect-leg"><span><svg width="12" height="12"><circle class="dot" cx="6" cy="6" r="4.5"/></svg>air sample</span><span><svg width="12" height="12"><rect class="dot" x="1.5" y="1.5" width="9" height="9"/></svg>settled-dust sample</span><span><svg width="12" height="12"><circle class="dot" cx="6" cy="6" r="4.5"/></svg>filled: asbestos found</span><span><svg width="12" height="12"><circle class="dot nd" cx="6" cy="6" r="4.5"/></svg>hollow: none detected</span><span>one mark per sample, placed on the floor it was taken from</span></div><div id="rd-sect-svg"></div><div class="tip" id="rd-sect-tip"></div></div>
+    <div class="sect-leg"><span><svg width="14" height="14" viewBox="0 0 14 14"><circle class="dot nd" cx="7" cy="7" r="4.5"/></svg>air, none detected</span><span><svg width="14" height="14" viewBox="0 0 14 14"><circle class="dot" cx="7" cy="7" r="4.5"/></svg>air, asbestos found</span><span><svg width="14" height="14" viewBox="0 0 14 14"><rect class="dot nd" x="2.5" y="2.5" width="9" height="9"/></svg>dust, none detected</span><span><svg width="14" height="14" viewBox="0 0 14 14"><rect class="dot" x="2.5" y="2.5" width="9" height="9"/></svg>dust, asbestos found</span></div><div id="rd-sect-svg"></div><div class="tip" id="rd-sect-tip"></div></div>
   <div class="tbl" id="rd-byschool" style="display:none"></div>
   <div class="pager" id="rd-pager-top"></div>
   <div class="tbl"><table id="rd-table"><thead><tr><th class="sort" data-k="s">School</th><th class="sort" data-k="d">Date</th><th class="sort" data-k="l">Location</th><th class="sort" data-k="n">Sample</th><th class="sort num" data-k="v" id="rd-th-v">Value</th><th>Notes</th><th class="sort" data-k="doc">Source page</th></tr></thead><tbody></tbody></table></div>
@@ -301,19 +301,19 @@ function renderSection(school, isDefault) {
   if (placed.length < 10) { el.style.display = "none"; return; } el.style.display = "";
   const order = f => f === "Roof" ? 1000 : f === "Outside" ? -3 : f === "Basement" ? -2 : f === "Common rooms" ? -1 : f;
   const floors = [...new Set(placed.map(o => o.f))].sort((a, b) => order(b) - order(a));
-  const W = 960, L = 70, R = 12, T = 14, B = 30, RH = 22, H = T + B + RH * floors.length;
+  const W = 960, L = 118, R = 12, T = 14, B = 30, RH = 22, H = T + B + RH * floors.length;
   const ds = placed.map(o => Date.parse(o.r.d)); let t0 = Math.min(...ds), t1 = Math.max(...ds); if (t1 - t0 < 864e5 * 30) { t0 -= 864e5 * 15; t1 += 864e5 * 15; }
   const xd = d => L + (W - L - R) * (Date.parse(d) - t0) / ((t1 - t0) || 1), yf = f => T + RH * (floors.indexOf(f) + .5);
   const months = []; for (let d = new Date(t0); d <= new Date(t1); d.setMonth(d.getMonth() + 1)) months.push(new Date(d.getFullYear(), d.getMonth(), 1));
   const lbl = f => typeof f === "number" ? (f === 1 ? "1st floor" : f === 2 ? "2nd floor" : f === 3 ? "3rd floor" : f + "th floor") : f;
   $("rd-sect-svg").innerHTML = `<svg viewBox="0 0 ${W} ${H}">
     ${floors.map(f => `<line class="grid" x1="${L}" x2="${W - R}" y1="${yf(f)}" y2="${yf(f)}"/><text class="axis" x="${L - 8}" y="${yf(f) + 3}" text-anchor="end">${lbl(f)}</text>`).join("")}
-    ${months.filter((m, i) => i % Math.ceil(months.length / 12) === 0).map(m => `<text class="axis" x="${xd(m)}" y="${H - 10}">${m.toLocaleString("en-US", {month: "short", year: "2-digit"})}</text>`).join("")}
+    ${months.filter((m, i) => i % Math.ceil(months.length / 12) === 0 && xd(m) < W - R - 44).map(m => `<text class="axis" x="${xd(m)}" y="${H - 10}">${m.toLocaleString("en-US", {month: "short", year: "2-digit"})}</text>`).join("")}
     ${placed.map((o, i) => { const x = xd(o.r.d).toFixed(1), y = (yf(o.f) + (o.r.a === "asbestos" ? -4 : 4)).toFixed(1), det = o.r.q === "";
       return o.r.a === "asbestos" ? `<circle class="dot${det ? "" : " nd"}" cx="${x}" cy="${y}" r="4" data-i="${i}"/>` : `<rect class="dot${det ? "" : " nd"}" x="${x - 3.5}" y="${y - 3.5}" width="7" height="7" data-i="${i}"/>`; }).join("")}</svg>`;
   const n = placed.length, det = placed.filter(o => o.r.q === "").length, unplaced = rows.length - n;
   $("rd-sect-title").textContent = `Where the asbestos samples were taken: ${school}`;
-  $("rd-sect-sub").textContent = `${fmt(n)} samples with a readable location, by floor and date. Asbestos was found in ${det}. ${unplaced ? fmt(unplaced) + " more samples had no floor in their location text. " : ""}${isDefault ? "Pick a school above to change." : ""}`;
+  $("rd-sect-sub").textContent = `One mark per sample, on the floor it was taken from, at its date. ${fmt(n)} samples had a readable location; asbestos was found in ${det}. ${unplaced ? fmt(unplaced) + " more samples had no floor in their location text. " : ""}${isDefault ? "Pick a school above to change." : ""}`;
   const tip = $("rd-sect-tip"), svg = $("rd-sect-svg").firstElementChild;
   svg.addEventListener("mousemove", e => { const c = e.target.closest(".dot"); if (!c) { tip.style.display = "none"; return; }
     const r = placed[+c.dataset.i].r; tip.textContent = `${r.d} · ${r.l} · ${r.q}${r.v} ${r.u}`; tip.style.display = "block";
