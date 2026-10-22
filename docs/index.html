@@ -164,6 +164,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
     <label class="chk"><input type="checkbox" id="rd-nd" checked /> show non-detects</label>
   </div>
   <div class="chart" id="rd-chart"><h3 id="rd-title"></h3><div class="sub" id="rd-sub"></div><div id="rd-svg"></div><div class="tip" id="rd-tip"></div></div>
+  <div class="tbl" id="rd-byschool" style="display:none"></div>
   <div class="tbl"><table id="rd-table"><thead><tr><th>School</th><th>Date</th><th>Location / sample</th><th class="num">Value</th><th>Unit</th><th>Note</th><th>Source</th></tr></thead><tbody></tbody></table></div>
   <button class="more" id="rd-more" style="display:none"></button>
 </section>
@@ -208,21 +209,24 @@ function route() {
 
 /* ---------- lab readings ---------- */
 let RD = null, rdPage = 0;
-const ANALYTE_LABEL = {asbestos: "Asbestos in air (TEM)", dioxin_TCDD_eq: "Dioxin on surfaces (2,3,7,8-TCDD eq.)", lead: "Lead (air & dust wipes)",
+const ANALYTE_LABEL = {asbestos: "Asbestos in air (TEM)", dioxin_TCDD_eq: "Dioxin on surfaces (2,3,7,8-TCDD eq.)", lead: "Lead on surfaces (dust wipes)", lead_air: "Lead in air (NIOSH 7082)",
   PM2_5: "Respirable particulates PM₂.₅", "PM2.5": "Respirable particulates PM₂.₅", CO2: "Carbon dioxide", CO: "Carbon monoxide", temperature: "Temperature",
-  relative_humidity: "Relative humidity", TVOC: "Total volatile organic compounds", mercury: "Mercury vapor", lead_metals_panel: "Lead in air (metals panel)", asbestos_bulk: "Asbestos in settled dust, bulk PLM (handwritten sheets)", dust_fiberglass: "Fiberglass in settled dust (handwritten custody forms)", dust_asbestos_plm: "Asbestos found in settled dust (custody forms)"};
+  relative_humidity: "Relative humidity", TVOC: "Total volatile organic compounds", mercury: "Mercury vapor", lead_metals_panel: "Lead in air (metals panel)", asbestos_bulk: "Asbestos in settled dust, bulk PLM (handwritten sheets; floor 1 %)", dust_fiberglass: "Fiberglass in settled dust (handwritten custody forms)", dust_asbestos_plm: "Asbestos found in settled dust (custody forms)"};
+const DUST = ["asbestos_bulk","dust_asbestos_plm","dust_fiberglass","dioxin_TCDD_eq","lead"];
 const METALS = ["aluminum","cadmium","chromium","cobalt","copper","iron","magnesium","manganese","molybdenum","nickel","zinc"];
 async function loadReadings(analyte) {
   if (!RD) {
     RD = await fetch("data/readings.json").then(r => r.json());
     const det = RD.rows.filter(r => r.a === "asbestos" && r.q === "" && r.v > 0).length;
     const schools = [...new Set(RD.rows.map(r => r.s))].filter(s => s !== "Unknown").sort();
+    const dust = RD.rows.filter(r => DUST.includes(r.a));
     $("rd-stats").innerHTML = [[RD.rows.length, "readings"], [RD.n_reports, "reports parsed"], [schools.length, "schools"],
-      [RD.rows.filter(r => r.a === "asbestos").length, "asbestos air samples"], [det, "asbestos detections"]]
+      [RD.rows.filter(r => r.a === "asbestos").length, "asbestos air samples"], [det, "asbestos detections"],
+      [dust.length, "settled-dust samples"], [dust.filter(r => r.a !== "dioxin_TCDD_eq" && r.q === "").length, "dust detections"]]
       .map(([n, l]) => `<div class="stat"><b>${fmt(n)}</b><span>${l}</span></div>`).join("");
-    const order = ["asbestos","asbestos_bulk","dust_asbestos_plm","dust_fiberglass","dioxin_TCDD_eq","lead","lead_metals_panel","PM2.5","CO2","CO","TVOC","temperature","relative_humidity","mercury", ...METALS];
-    $("rd-analyte").innerHTML = order.filter(a => RD.rows.some(r => r.a === a)).map(a =>
-      `<option value="${a}">${ANALYTE_LABEL[a] || a[0].toUpperCase() + a.slice(1) + " (air)"} · ${fmt(RD.rows.filter(r => r.a === a).length)}</option>`).join("");
+    const groups = [["Air", ["asbestos","lead_air","lead_metals_panel","PM2.5","CO2","CO","TVOC","temperature","relative_humidity","mercury", ...METALS]], ["Settled dust & surfaces", DUST]];
+    const opt = a => `<option value="${a}">${ANALYTE_LABEL[a] || a[0].toUpperCase() + a.slice(1) + " (air)"} · ${fmt(RD.rows.filter(r => r.a === a).length)}</option>`;
+    $("rd-analyte").innerHTML = groups.map(([g, as]) => `<optgroup label="${g}">${as.filter(a => RD.rows.some(r => r.a === a)).map(opt).join("")}</optgroup>`).join("");
     $("rd-school").innerHTML += schools.map(s => `<option>${esc(s)}</option>`).join("");
     ["rd-analyte","rd-school","rd-log","rd-nd"].forEach(id => $(id).addEventListener("change", () => { rdPage = 0; renderReadings(); }));
   }
@@ -261,6 +265,13 @@ function renderReadings() {
     svg.addEventListener("mouseleave", () => tip.style.display = "none");
     svg.addEventListener("click", e => { const c = e.target.closest("circle"); if (c) window.open(pdfLink(rows[+c.dataset.i]), "_blank"); });
   }
+  if (DUST.includes(a) && !sch && rows.length) {
+    const by = {}; rows.forEach(r => { const b = by[r.s] || (by[r.s] = {n: 0, det: 0, max: null, d0: r.d, d1: r.d}); b.n++; if (r.q === "") { b.det++; b.max = Math.max(b.max ?? -Infinity, r.v); } b.d0 = r.d < b.d0 ? r.d : b.d0; b.d1 = r.d > b.d1 ? r.d : b.d1; });
+    const hasND = rows.some(r => r.q !== "");
+    $("rd-byschool").innerHTML = `<div class="sub">By school</div><table><thead><tr><th>School</th><th class="num">Samples</th>${hasND ? '<th class="num">Detects</th>' : ""}<th class="num">${hasND ? "Max detect" : "Max"}</th><th>Dates</th></tr></thead><tbody>${
+      Object.entries(by).sort((p, q) => q[1].n - p[1].n).map(([sname, b]) => `<tr><td>${esc(sname)}</td><td class="num">${fmt(b.n)}</td>${hasND ? `<td class="num">${b.det}</td>` : ""}<td class="num">${b.max != null ? fmtv(b.max) + " " + esc(unit) : "—"}</td><td>${b.d0} … ${b.d1}</td></tr>`).join("")}</tbody></table>`;
+    $("rd-byschool").style.display = "";
+  } else $("rd-byschool").style.display = "none";
   const byVal = [...rows].sort((p, q) => (q.v - p.v) || p.d.localeCompare(q.d)); const PAGE = 60, slice = byVal.slice(0, (rdPage + 1) * PAGE);
   const note = r => [r.x && r.x.type && r.x.type !== "None Detected" ? r.x.type.toLowerCase() : "", r.x && r.x.n_gt5 ? `${r.x.n_gt5} structures >5µ` : "",
     r.x && r.x.min != null ? `range ${fmtv(r.x.min)}–${fmtv(r.x.max)}` : "", r.x && r.x.outdoor_max != null ? `outdoor ${fmtv(r.x.outdoor_min)}–${fmtv(r.x.outdoor_max)}` : "",

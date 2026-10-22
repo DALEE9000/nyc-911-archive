@@ -176,7 +176,8 @@ GUIDELINES = {  # analyte -> (value, unit, label) drawn as a reference line on t
     "CO": (9, "ppm", "EPA NAAQS / ASHRAE 9 ppm"),
     "PM2.5": (65, "ug/m3", "EPA 24-h NAAQS 65 µg/m³ (40 for sensitive groups)"),
     "TVOC": (1, "ppm", "AIHA 1 ppm"),
-    "lead": (40, "ug/ft2", "HUD/NYC floor clearance 40 µg/ft² (air samples: OSHA action 30 µg/m³)"),
+    "lead": (40, "ug/ft2", "HUD/NYC floor clearance 40 µg/ft²"),
+    "lead_air": (30, "ug/m3", "OSHA action level 30 µg/m³ (8-h)"),
     "temperature": (79, "F", "ASHRAE 55 summer 73–79 °F"), "relative_humidity": (60, "%", "ASHRAE 55 30–60 %"),
     "asbestos_bulk": (1, "%", "NYC/EPA: material is asbestos-containing at >1 %"),
 }
@@ -211,7 +212,7 @@ def handwritten_rows():
             v = s.get("chrysotile_pct") or s.get("amosite_pct")
             out.append({"file": s["file"], "page": s["page"], "doc": None, "school": s["school"], "date": s.get("analysis_date"),
                         "sample": s.get("field_no"), "location": s.get("sample_id"), "template": "plm_bulk_sheet", "analyte": "asbestos_bulk",
-                        "unit": "%", "qual": "" if det else "<", "value": (v if det and v else (1.0 if det else 0.1)),
+                        "unit": "%", "qual": "" if det else "<", "value": (v if det and v else 1.0),  # PLM reporting floor is 1 %
                         "extra": {"legibility": s.get("legibility"), "handwritten": True, "cellulose_pct": s.get("cellulose_pct"),
                                   "fiberglass_pct": s.get("fiberglass_pct"), "other_fibrous": s.get("other_fibrous")}})
     for r in out:
@@ -232,6 +233,8 @@ def build_readings():
         reports.add(r["file"])
         e = r.get("extra", {})
         if r["template"] == "metals_air" and r["analyte"] == "lead": r["analyte"] = "lead_metals_panel"
+        if r["analyte"] == "lead" and r["unit"] == "ug/m3": r["analyte"] = "lead_air"
+        if r["analyte"] == "asbestos" and not r["qual"] and str(e.get("type", "")).lower().startswith("none"): r["qual"] = "<"  # count sheet says None Detected
         if r["analyte"] == "asbestos" and r["value"] == 0 and not r["qual"]: r["qual"] = "<"; r["value"] = e.get("sensitivity_S_cc") or 0.0044
         if r["location"]: r["location"] = re.sub(r"(?<=\d)[^\w\s,/()&#.-]{1,3}", "", r["location"]).replace("Mam ", "Main ").strip(" ,")
         # the portal holds several scanned copies of many reports; keep one per (school, date, analyte, location/sample, value)
