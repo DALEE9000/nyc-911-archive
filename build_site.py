@@ -178,14 +178,55 @@ GUIDELINES = {  # analyte -> (value, unit, label) drawn as a reference line on t
     "TVOC": (1, "ppm", "AIHA 1 ppm"),
     "lead": (40, "ug/ft2", "HUD/NYC floor clearance 40 µg/ft² (air samples: OSHA action 30 µg/m³)"),
     "temperature": (79, "F", "ASHRAE 55 summer 73–79 °F"), "relative_humidity": (60, "%", "ASHRAE 55 30–60 %"),
+    "asbestos_bulk": (1, "%", "NYC/EPA: material is asbestos-containing at >1 %"),
 }
+
+
+def handwritten_rows():
+    """Readings transcribed from handwritten pages (merge_handwritten.py): settled-dust fiberglass/asbestos
+    results and lead wipes from chain-of-custody forms, and PLM bulk asbestos sheets."""
+    out = []
+    p = Path("data/custody.jsonl")
+    if p.exists():
+        for line in p.open(encoding="utf-8"):
+            c = json.loads(line)
+            if c["form"] != "bulk" or not c.get("result"): continue
+            res = str(c["result"]).strip().upper(); base = {"file": c["file"], "page": c["page"], "doc": None, "school": c["school"], "date": c["date"],
+                                                           "sample": c["sample_id"], "location": c["location"], "template": "custody_bulk",
+                                                           "extra": {"legibility": c["legibility"], "handwritten": True}}
+            m = re.match(r"^(<?)\s*(\d+(?:\.\d+)?)", res)
+            if "UG" in res or (m and float(m.group(2)) >= 1):            # lead dust wipe, µg/ft²
+                if not m: continue
+                out.append({**base, "analyte": "lead", "unit": "ug/ft2", "qual": m.group(1), "value": float(m.group(2))})
+            elif "CHRYS" in res or "ASB" in res:
+                out.append({**base, "analyte": "dust_asbestos_plm", "unit": "PLM", "qual": "", "value": 1.0, "extra": {**base["extra"], "result_text": res}})
+            elif res.startswith(("ND", "NONE", "NO FIB", "N.D")):
+                out.append({**base, "analyte": "dust_fiberglass", "unit": "PLM", "qual": "<", "value": 0.1})
+            elif res.startswith(("TR", "TRACE")):
+                out.append({**base, "analyte": "dust_fiberglass", "unit": "PLM", "qual": "", "value": 0.5, "extra": {**base["extra"], "result_text": res}})
+    p = Path("data/plm_bulk.jsonl")
+    if p.exists():
+        for line in p.open(encoding="utf-8"):
+            s = json.loads(line); det = str(s.get("asbestos_detected")).lower() == "yes"
+            v = s.get("chrysotile_pct") or s.get("amosite_pct")
+            out.append({"file": s["file"], "page": s["page"], "doc": None, "school": s["school"], "date": s.get("analysis_date"),
+                        "sample": s.get("field_no"), "location": s.get("sample_id"), "template": "plm_bulk_sheet", "analyte": "asbestos_bulk",
+                        "unit": "%", "qual": "" if det else "<", "value": (v if det and v else (1.0 if det else 0.1)),
+                        "extra": {"legibility": s.get("legibility"), "handwritten": True, "cellulose_pct": s.get("cellulose_pct"),
+                                  "fiberglass_pct": s.get("fiberglass_pct"), "other_fibrous": s.get("other_fibrous")}})
+    for r in out:
+        if r["date"] and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(r["date"])): r["date"] = None
+    return out
 
 
 def build_readings():
     if not READINGS.exists(): print("no readings.jsonl; skip"); return
     out, reports, seen_keys, dup = [], set(), set(), {}
-    for line in READINGS.open(encoding="utf-8"):
-        r = json.loads(line); reports.add(r["file"])
+    src = Path("data/readings_located.jsonl") if Path("data/readings_located.jsonl").exists() else READINGS
+    rows_in = [json.loads(l) for l in src.open(encoding="utf-8")]
+    rows_in += handwritten_rows()
+    for r in rows_in:
+        reports.add(r["file"])
         e = r.get("extra", {})
         if r["template"] == "metals_air" and r["analyte"] == "lead": r["analyte"] = "lead_metals_panel"
         if r["analyte"] == "asbestos" and r["value"] == 0 and not r["qual"]: r["qual"] = "<"; r["value"] = e.get("sensitivity_S_cc") or 0.0044
@@ -197,7 +238,8 @@ def build_readings():
         out.append({"s": r["school"] or "Unknown", "d": r["date"], "t": r["template"], "a": r["analyte"], "v": r["value"], "q": r["qual"],
                     "u": r["unit"], "l": r["location"], "n": r["sample"], "f": r["file"], "p": r["page"], "doc": r["doc"],
                     "x": {k: e[k] for k in ("min", "max", "outdoor_min", "outdoor_max", "type", "n_05_5", "n_gt5", "vol_L", "blank",
-                                            "ocr_corrected_from", "outside_narrative_range", "detection_limit") if k in e and e[k] not in (None, False)},
+                                            "ocr_corrected_from", "outside_narrative_range", "detection_limit", "custody_doc", "legibility",
+                                            "handwritten", "result_text", "cellulose_pct", "fiberglass_pct") if k in e and e[k] not in (None, False)},
                     **({"inf": 1} if r.get("school_inferred") else {})})
     analytes = collections.Counter(r["a"] for r in out)
     (SITE / "readings.json").write_text(json.dumps({"n_reports": len(reports), "guidelines": GUIDELINES, "analytes": analytes.most_common(),

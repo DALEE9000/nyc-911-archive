@@ -155,7 +155,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
 </section>
 
 <section id="s-readings">
-  <p class="note">Every number ATC's lab reports gave the Board of Education, pulled from the typed results tables and narratives of 754 reports: asbestos in air, dioxin on surfaces, lead, metals, and the indoor-air sweeps (CO₂, CO, particulates, temperature, humidity). Hollow dots are below detection. Click a dot or a row to open the page it came from.</p>
+  <p class="note">Every number ATC's lab reports gave the Board of Education: asbestos in air, dioxin on surfaces, lead, metals, and the indoor-air sweeps (CO₂, CO, particulates, temperature, humidity) from the typed results tables of 754 reports, plus settled-dust results and room locations read off 628 handwritten chain-of-custody and microscopy sheets. Hollow dots are below detection. Rows read from handwriting say so, with a legibility grade. Click a dot or a row to open the page it came from.</p>
   <div class="stats" id="rd-stats"></div>
   <div class="ctl">
     <select class="filter" id="rd-analyte"></select>
@@ -175,6 +175,7 @@ footer a{color:var(--muted);text-decoration:none} footer a:hover{color:var(--cya
   <p>The portal runs on a Mindbreeze search appliance with an open JSON interface. A script paged through the index agency by agency and saved the metadata the city attached to each PDF: title, agency, production volume, box name, folder name, page count, plus the first two thousand characters of the city's own OCR text. No PDFs were downloaded. The index also contains a Markdown twin of every PDF; those are the OCR layer and are excluded from the counts.</p>
   <p>Building locations come from parsing DEP folder names of the form <code>68 WARREN STREET Block: 137 Lot: 1</code> and geocoding the address with <a href="https://geosearch.planninglabs.nyc/">NYC GeoSearch</a>. Folders that are not addresses (email binders, lab batches, EPA working-group files) are in the navigator but not on the map.</p>
   <p>The school testing timeline reads the analysis date printed on each count sheet. Sheets whose date did not survive OCR are omitted; the numbers are a floor, not a census.</p>
+  <p>Lab readings come from two passes over the 1,911 multi-page DOE reports. Typed results tables were rebuilt from the city's own text layer by sorting words on page coordinates; each value was checked against the report's narrative range, and dropped-decimal OCR slips were corrected and flagged. Handwritten chain-of-custody forms and bulk-asbestos microscopy sheets (628 pages) were transcribed by a vision model page by page, with a legibility grade and a note on every uncertain cell; those rows are marked "handwritten" in the table. Room locations for asbestos air samples were matched from custody forms by school, sample number, pump volume and date. The portal holds several scanned copies of many reports; duplicates were collapsed to one reading.</p>
   <h3>Caveats</h3>
   <p>Box and folder labels were typed by whoever scanned the box, so spelling varies and some folders are mislabeled. The "Date" field in the city's index is the date of indexing, not of the document, and is ignored here. Production volumes (NYC-WTC0001 through 0010) are the batches in which the Law Department released records, not an archival series.</p>
   <h3>Rebuild</h3>
@@ -209,7 +210,7 @@ function route() {
 let RD = null, rdPage = 0;
 const ANALYTE_LABEL = {asbestos: "Asbestos in air (TEM)", dioxin_TCDD_eq: "Dioxin on surfaces (2,3,7,8-TCDD eq.)", lead: "Lead (air & dust wipes)",
   PM2_5: "Respirable particulates PM₂.₅", "PM2.5": "Respirable particulates PM₂.₅", CO2: "Carbon dioxide", CO: "Carbon monoxide", temperature: "Temperature",
-  relative_humidity: "Relative humidity", TVOC: "Total volatile organic compounds", mercury: "Mercury vapor", lead_metals_panel: "Lead in air (metals panel)"};
+  relative_humidity: "Relative humidity", TVOC: "Total volatile organic compounds", mercury: "Mercury vapor", lead_metals_panel: "Lead in air (metals panel)", asbestos_bulk: "Asbestos in settled dust, bulk PLM (handwritten sheets)", dust_fiberglass: "Fiberglass in settled dust (handwritten custody forms)", dust_asbestos_plm: "Asbestos found in settled dust (custody forms)"};
 const METALS = ["aluminum","cadmium","chromium","cobalt","copper","iron","magnesium","manganese","molybdenum","nickel","zinc"];
 async function loadReadings(analyte) {
   if (!RD) {
@@ -219,7 +220,7 @@ async function loadReadings(analyte) {
     $("rd-stats").innerHTML = [[RD.rows.length, "readings"], [RD.n_reports, "reports parsed"], [schools.length, "schools"],
       [RD.rows.filter(r => r.a === "asbestos").length, "asbestos air samples"], [det, "asbestos detections"]]
       .map(([n, l]) => `<div class="stat"><b>${fmt(n)}</b><span>${l}</span></div>`).join("");
-    const order = ["asbestos","dioxin_TCDD_eq","lead","lead_metals_panel","PM2.5","CO2","CO","TVOC","temperature","relative_humidity","mercury", ...METALS];
+    const order = ["asbestos","asbestos_bulk","dust_asbestos_plm","dust_fiberglass","dioxin_TCDD_eq","lead","lead_metals_panel","PM2.5","CO2","CO","TVOC","temperature","relative_humidity","mercury", ...METALS];
     $("rd-analyte").innerHTML = order.filter(a => RD.rows.some(r => r.a === a)).map(a =>
       `<option value="${a}">${ANALYTE_LABEL[a] || a[0].toUpperCase() + a.slice(1) + " (air)"} · ${fmt(RD.rows.filter(r => r.a === a).length)}</option>`).join("");
     $("rd-school").innerHTML += schools.map(s => `<option>${esc(s)}</option>`).join("");
@@ -263,7 +264,9 @@ function renderReadings() {
   const byVal = [...rows].sort((p, q) => (q.v - p.v) || p.d.localeCompare(q.d)); const PAGE = 60, slice = byVal.slice(0, (rdPage + 1) * PAGE);
   const note = r => [r.x && r.x.type && r.x.type !== "None Detected" ? r.x.type.toLowerCase() : "", r.x && r.x.n_gt5 ? `${r.x.n_gt5} structures >5µ` : "",
     r.x && r.x.min != null ? `range ${fmtv(r.x.min)}–${fmtv(r.x.max)}` : "", r.x && r.x.outdoor_max != null ? `outdoor ${fmtv(r.x.outdoor_min)}–${fmtv(r.x.outdoor_max)}` : "",
-    r.x && r.x.ocr_corrected_from != null ? `OCR fixed from ${r.x.ocr_corrected_from}` : "", r.x && r.x.outside_narrative_range ? "⚠ outside report's stated range" : "", r.inf ? "school inferred" : ""].filter(Boolean).join("; ");
+    r.x && r.x.ocr_corrected_from != null ? `OCR fixed from ${r.x.ocr_corrected_from}` : "", r.x && r.x.outside_narrative_range ? "⚠ outside report's stated range" : "", r.inf ? "school inferred" : "",
+    r.x && r.x.handwritten ? `handwritten, read by model (${r.x.legibility || "?"})` : "", r.x && r.x.custody_doc ? "room from custody form" : "", r.x && r.x.result_text ? `"${r.x.result_text}"` : "",
+    r.x && r.x.cellulose_pct != null ? `cellulose ${r.x.cellulose_pct}%` : "", r.x && r.x.fiberglass_pct != null ? `fiberglass ${r.x.fiberglass_pct}%` : ""].filter(Boolean).join("; ");
   $("rd-table").querySelector("tbody").innerHTML = slice.map(r => `<tr class="rowlink" data-u="${pdfLink(r)}"><td>${esc(r.s)}</td><td class="d">${r.d}</td><td>${esc(r.l || "")}${r.n ? ` <span style="font-family:var(--mono);font-size:11px;color:var(--dim)">#${esc(r.n)}</span>` : ""}</td>
     <td class="num">${r.q}${fmtv(r.v)}</td><td>${esc(r.u)}</td><td>${esc(note(r))}</td><td><a href="${pdfLink(r)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:11px;text-decoration:none">${esc(r.doc || r.f.replace(".pdf", ""))}</a></td></tr>`).join("");
   $("rd-table").querySelectorAll("tr.rowlink").forEach(tr => tr.onclick = e => { if (!e.target.closest("a")) window.open(tr.dataset.u, "_blank"); });

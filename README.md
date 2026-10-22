@@ -41,3 +41,15 @@ streamlit run app.py                # separate: live search client over the city
 - `docs/<agency>.json` doc lists keyed `box|folder` (title, pages, volume, 160-char snippet).
 - `buildings.json` GeoJSON of DEP address folders via NYC GeoSearch (cache in `data/geocode_cache.json`).
 - `schools.json` count sheets per ISO week + ATC project index (dates parsed from OCR; floor, not census).
+
+## Lab readings pipeline (added 2026-10-21/22)
+```
+python fetch_reports.py            # 1,911 multi-page DOE/ATC report PDFs -> data/reports/ (resumable, free, ~550 MB)
+python classify_reports.py         # template tags per PDF -> data/reports_index.json
+python parse_reports.py            # typed tables + narratives -> data/readings.jsonl (+ coverage json)
+# handwritten pass: render pages, batch, transcribe with vision subagents (data/pages/{batches,out})
+python merge_handwritten.py        # -> data/custody.jsonl, data/plm_bulk.jsonl, data/readings_located.jsonl
+python build_site.py               # -> docs/data/readings.json (dedupes duplicate scans; joins rooms to asbestos samples)
+```
+Flat tables for reuse: `docs/data/custody.jsonl` (chain-of-custody rows) and `docs/data/plm_bulk.jsonl` (PLM bulk sheets).
+Handwritten rows carry `legibility` good/fair/poor and the transcriber's notes live in `data/pages/out/*.jsonl`.
